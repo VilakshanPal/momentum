@@ -1,10 +1,14 @@
 import "server-only";
-import Anthropic from "@anthropic-ai/sdk";
-import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
+import OpenAI from "openai";
+import { zodTextFormat } from "openai/helpers/zod";
 import { MomSchema, type Item, type Mom } from "./schema";
 import { mockFollowUp, mockMom } from "./mock";
 
-const MODEL = "claude-opus-5-5";
+// Override with OPENAI_MODEL. Any model with structured outputs works.
+const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.5";
+const client = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Reasoning models: keep effort low so a draft returns in well under Vercel's 60s function limit.
+const reasoning = /^(gpt-5|o\d)/.test(MODEL) ? { effort: (process.env.OPENAI_REASONING ?? "low") as "low" | "medium" | "high" } : undefined;
 
 type Ctx = {
   projectName: string;
@@ -24,33 +28,34 @@ Rules you must never break:
 - Open questions are things nobody answered in the meeting. Keep them separate from actions.
 - For every decision, action and question, include "evidence": the shortest verbatim excerpt from the notes that justifies it, or null if none.
 - due_on must be an ISO date (YYYY-MM-DD) resolved relative to the meeting date, or null if the notes only say something vague like "soon".
-- The notes may reference work that already exists as a carried-forward item (listed in the prompt). Do not create a new action or question for it. Instead add an entry to carried_updates with the item id, the status the notes suggest, and the evidence. Suggest "done"/"resolved" only when the notes clearly say it happened.
+- The notes may reference work that already exists as a carried-forward item (listed in the prompt). Do not create a new action or question for it. If the notes show its status changed, add an entry to carried_updates with the item id, the new status, and the evidence. Only include entries where the status actually changes. Never move an item backwards (for example in_progress to todo, or done to anything). Suggest "done"/"resolved" only when the notes clearly say it happened.
 - participants: people the notes identify as attending, as written. Empty if the notes do not say.
+- discussion_points: three to six points covering what was talked about that is not already captured as a decision, action or question. No duplicates of the summary.
+- Write dates in prose naturally ("28 October"), ISO format only in due_on.
 - Write titles as short imperative or declarative phrases. Keep the summary to three or four sentences. follow_up_context is one or two sentences about what the next meeting needs to pick up.
-- Use only information in the notes. Do not pad with assumptions.`;
+- Use only information in the notes. Do not pad with assumptions. No em dashes.`;
 
 function carriedBlock(items: Item[]) {
   if (!items.length) return "No carried-forward items.";
   return items
     .map(
       (i) =>
-        `- id=${i.id} [${i.kind}] "${i.title}" status=${i.status}${i.owner ? ` owner=${i.owner}` : ""}${i.due_on ? ` due=${i.due_on}` : ""}${i.blocker ? ` blocker="${i.blocker}"` : ""}`,
+        `- id=${i.id} [${i.kind}; allowed statuses: ${i.kind === "action" ? "todo, in_progress, done, blocked" : i.kind === "question" ? "open, resolved" : "proposed, confirmed"}] "${i.title}" status=${i.status}${i.owner ? ` owner=${i.owner}` : ""}${i.due_on ? ` due=${i.due_on}` : ""}${i.blocker ? ` blocker="${i.blocker}"` : ""}`,
     )
     .join("\n");
+}
+
+function refused(res: { output: { type: string; content?: { type: string }[] }[] }) {
+  return res.output.some((o) => o.type === "message" && o.content?.some((c) => c.type === "refusal"));
 }
 
 export async function generateMom(notes: string, ctx: Ctx): Promise<Mom> {
   if (process.env.LLM_MOCK === "1" && process.env.NODE_ENV !== "production") return mockMom(notes, ctx.carried);
 
-  const client = new Anthropic();
-  const res = await client.messages.parse({
+  const res = await client().responses.parse({
     model: MODEL,
-    max_tokens: 16000,
-    system: SYSTEM,
-    messages: [
-      {
-        role: "user",
-        content: `Project: ${ctx.projectName}${ctx.client ? ` (client: ${ctx.client})` : ""}
+    instructions: SYSTEM,
+    input: `Project: ${ctx.projectName}${ctx.client ? ` (client: ${ctx.client})` : ""}
 Meeting: ${ctx.meetingTitle} on ${ctx.heldOn}
 Participants: ${ctx.participants.join(", ") || "not listed"}
 
@@ -61,17 +66,16 @@ Rough notes:
 """
 ${notes}
 """`,
-      },
-    ],
-    output_config: { format: zodOutputFormat(MomSchema) },
+    text: { format: zodTextFormat(MomSchema, "mom") },
+    reasoning,
   });
 
-  if (res.stop_reason === "refusal") throw new Error("The model declined to process these notes.");
-  if (!res.parsed_output) throw new Error("The model returned an invalid draft. Try again.");
+  const mom = res.output_parsed;
+  if (!mom) throw new Error(refused(res) ? "The model declined to process these notes." : "The model returned an invalid draft. Try again.");
   // Only keep carried_updates that reference real carried items.
   const ids = new Set(ctx.carried.map((c) => c.id));
-  res.parsed_output.carried_updates = res.parsed_output.carried_updates.filter((u) => ids.has(u.item_id));
-  return res.parsed_output;
+  mom.carried_updates = mom.carried_updates.filter((u) => ids.has(u.item_id));
+  return mom;
 }
 
 export async function generateFollowUp(input: {
@@ -86,15 +90,10 @@ export async function generateFollowUp(input: {
 }): Promise<string> {
   if (process.env.LLM_MOCK === "1" && process.env.NODE_ENV !== "production") return mockFollowUp(input);
 
-  const client = new Anthropic();
-  const res = await client.messages.create({
+  const res = await client().responses.create({
     model: MODEL,
-    max_tokens: 4000,
-    system: `You write short follow-up messages after agency client meetings. Plain text, no markdown headings, no emojis. Friendly and direct. Only include facts given to you. If an owner or date is missing, say it is unassigned or to be confirmed rather than guessing. Structure: one-line opener, "Decisions", "Actions" (owner, due date if known), "Still open" (questions and anything needing confirmation), one-line close. Keep it under 250 words.`,
-    messages: [
-      {
-        role: "user",
-        content: `Project: ${input.projectName}${input.client ? ` (client: ${input.client})` : ""}
+    instructions: `You write short follow-up messages after agency client meetings. Plain text, no markdown headings, no emojis, no em dashes. Write dates like "21 October", never ISO. Friendly and direct. Only include facts given to you. If an owner or date is missing, say it is unassigned or to be confirmed rather than guessing. Structure: one-line opener, "Decisions", "Actions" (owner, due date if known), "Still open" (questions and anything needing confirmation), one-line close. Keep it under 250 words.`,
+    input: `Project: ${input.projectName}${input.client ? ` (client: ${input.client})` : ""}
 Meeting: ${input.meetingTitle} on ${input.heldOn}
 Participants: ${input.participants.join(", ")}
 
@@ -107,11 +106,9 @@ Still unresolved from earlier meetings:
 ${carriedBlock(input.carried)}
 
 Write the follow-up message.`,
-      },
-    ],
+    reasoning,
   });
-  if (res.stop_reason === "refusal") throw new Error("The model declined to write this follow-up.");
-  const text = res.content.filter((b) => b.type === "text").map((b) => b.text).join("\n").trim();
-  if (!text) throw new Error("Empty follow-up returned. Try again.");
+  const text = res.output_text.trim();
+  if (!text) throw new Error(refused(res) ? "The model declined to write this follow-up." : "Empty follow-up returned. Try again.");
   return text;
 }

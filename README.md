@@ -14,13 +14,13 @@ npm run db:seed     # loads the synthetic HAIRO project with two meetings
 npm run dev         # http://localhost:3000
 ```
 
-Copy `.env.example` to `.env`. Without `ANTHROPIC_API_KEY`, set `LLM_MOCK=1` to exercise the UI with a deterministic fake draft.
+Copy `.env.example` to `.env`. Without `OPENAI_API_KEY`, set `LLM_MOCK=1` to exercise the UI with a deterministic fake draft.
 
 ## Deploy (Vercel + Supabase)
 
 1. Create a Supabase project. Run `db/migrations/0001_init.sql` in the SQL editor (or set `DATABASE_URL` and run `npm run db:migrate`).
 2. Seed it: `DATABASE_URL=<supabase session pooler url> npm run db:seed`.
-3. On Vercel set `DATABASE_URL`, `ANTHROPIC_API_KEY`, and `CRON_SECRET` (any long random string). The daily cron in `vercel.json` re-seeds the demo.
+3. On Vercel set `DATABASE_URL`, `OPENAI_API_KEY`, and `CRON_SECRET` (any long random string). The daily cron in `vercel.json` re-seeds the demo.
 
 No sign-in. Everything is server actions against Postgres; no credentials reach the browser.
 

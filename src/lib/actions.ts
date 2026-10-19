@@ -89,7 +89,17 @@ export async function generateDraft(meetingId: string, raw_notes: string): Promi
     const draft: Draft = {
       ...mom,
       actions: mom.actions.map((a) => ({ ...a, due_on: cleanDate(a.due_on) })),
-      carried_updates: mom.carried_updates.map((u) => ({ ...u, accepted: false })),
+      carried_updates: mom.carried_updates
+        .map((u) => {
+          // Coerce cross-kind statuses (an action marked "resolved", a question marked "done"); drop anything still invalid or unchanged.
+          const item = carried.find((c) => c.id === u.item_id)!;
+          const s = item.kind === "action" && u.suggested_status === "resolved" ? "done" : item.kind === "question" && u.suggested_status === "done" ? "resolved" : u.suggested_status;
+          return { ...u, suggested_status: s, accepted: false };
+        })
+        .filter((u) => {
+          const item = carried.find((c) => c.id === u.item_id)!;
+          return u.suggested_status !== item.status && statusOk(item.kind, u.suggested_status);
+        }),
     };
     const fill = !meeting.participants.length && draft.participants.length ? draft.participants.slice(0, 30).map((p) => p.slice(0, 80)) : null;
     await q(`update meetings set mom=$2, participants=coalesce($3, participants), updated_at=now() where id=$1`, [meetingId, JSON.stringify(draft), fill ? JSON.stringify(fill) : null]);
@@ -97,7 +107,7 @@ export async function generateDraft(meetingId: string, raw_notes: string): Promi
   } catch (e) {
     console.error("generateDraft failed", e);
     const msg = e instanceof Error ? e.message : "Generation failed.";
-    return { ok: false, error: /api key|authentication/i.test(msg) ? "LLM is not configured on the server (missing API key)." : msg };
+    return { ok: false, error: /api key|authentication|incorrect api key|401/i.test(msg) ? "LLM is not configured on the server (missing API key)." : msg };
   }
 }
 
@@ -249,7 +259,7 @@ export async function makeFollowUp(meetingId: string): Promise<Result<string>> {
   } catch (e) {
     console.error("follow-up failed", e);
     const msg = e instanceof Error ? e.message : "Generation failed.";
-    return { ok: false, error: /api key|authentication/i.test(msg) ? "LLM is not configured on the server (missing API key)." : msg };
+    return { ok: false, error: /api key|authentication|incorrect api key|401/i.test(msg) ? "LLM is not configured on the server (missing API key)." : msg };
   }
 }
 

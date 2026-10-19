@@ -57,3 +57,6 @@ A plain string exported from a "use client" file arrives in a server component a
 
 ## 2026-10-20: No em dashes anywhere
 User rule. UI copy, seed data, prompts, docs, commit messages. Grep for the character before committing.
+
+## 2026-10-20: LLM provider is OpenAI, not Anthropic
+User has OpenAI API access only. `src/lib/llm.ts` now uses the OpenAI Responses API with `zodTextFormat` structured output against the same `MomSchema`; follow-up uses `responses.create` and `output_text`. Model defaults to `gpt-5.5`, overridable with `OPENAI_MODEL`. Validation, mock fallback and error handling are unchanged.

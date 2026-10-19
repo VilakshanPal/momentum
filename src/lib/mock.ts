@@ -135,7 +135,7 @@ function heuristic(notes: string, carried: Item[]): Mom {
     actions: pick(/\b(will|to|I'll)\b/i).slice(0, 4).map((l) => ({ title: strip(l), detail: null, owner: name(l), due_on: null, blocker: /blocked/i.test(l) ? "See notes" : null, evidence: l })),
     questions: pick(/\?|tbc|not sure|didn't decide/i).slice(0, 3).map((l) => ({ title: strip(l), owner: name(l), evidence: l })),
     carried_updates: carried.slice(0, 1).map((c) => ({ item_id: c.id, suggested_status: c.kind === "action" ? "done" : "resolved", evidence: lines[2] ?? null })),
-    follow_up_context: "Mock output. Set ANTHROPIC_API_KEY and unset LLM_MOCK for real generation.",
+    follow_up_context: "Mock output. Set OPENAI_API_KEY and unset LLM_MOCK for real generation.",
   };
 }
 
