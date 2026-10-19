@@ -36,7 +36,7 @@ Updated at the end of every work block. Read this first.
 
 ## Needs from Arman
 - Supabase project: `DATABASE_URL` (Session pooler string) for Vercel env and for seeding.
-- `OPENAI_API_KEY` for Vercel env and for local testing of real generation (put it in `.env`, remove `LLM_MOCK`). Model defaults to gpt-5.5, override with `OPENAI_MODEL`.
+- `OPENAI_API_KEY` is set locally and real generation is verified. Still needed on Vercel. Model defaults to gpt-5.5, override with `OPENAI_MODEL`; reasoning effort defaults to low, override with `OPENAI_REASONING`.
 - Vercel project connected to this repo (or run `vercel` once locally). Set `CRON_SECRET` too.
 - Optional: a real set of rough notes from an actual meeting, to tune the prompt and to show "one real result" in the submission.
 
