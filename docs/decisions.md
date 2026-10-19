@@ -32,3 +32,13 @@ One seeded demo project. All writes go through server actions. A "Reset demo dat
 
 ## 2026-10-20 — UI direction
 Notion/ClickUp register: white surfaces, hairline borders, neutral greys, one accent, Inter, dense tables, left sidebar with project navigation, inline-editable cells. No gradients, no glassmorphism, no hero sections. Components hand-written with Tailwind; no shadcn or component kit.
+
+## 2026-10-20 — Fixed demo IDs
+The seeded project and its two meetings use constant UUIDs (`DEMO_PROJECT_ID` in `src/lib/seed.ts`). A reset wipes and re-inserts the same IDs.
+Why: the submission link and the demo video point at `/p/<id>`. A reset must not break them.
+
+## 2026-10-20 — cacheComponents off
+Next 16 scaffolds with `cacheComponents: true`, which requires Suspense boundaries around every dynamic read. Every page here reads the DB per request, so classic dynamic rendering is simpler. Turned off in `next.config.ts`.
+
+## 2026-10-20 — No refusal fallbacks on the LLM call
+`messages.parse` is used without the server-side `fallbacks` parameter. Meeting notes are low-risk content; a refusal surfaces as an error with retry. Revisit if a refusal is ever seen in testing.

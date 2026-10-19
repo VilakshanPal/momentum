@@ -44,4 +44,5 @@ See README.md. `npm run db` → `npm run db:migrate` → `npm run db:seed` → `
 
 ## Log
 - 2026-10-20 00:30: Plan accepted. Build started. Decisions 1–8 recorded.
+- 2026-10-20 01:45: Demo IDs pinned, reset verified in browser, polish commit.
 - 2026-10-20 01:30: Core loop built and walked through in Chrome with the mock LLM: new meeting → sample notes → draft → tick carried update → publish → board shows live records, carried item marked done, follow-up drafted, Markdown copy. Production build clean. First commit.

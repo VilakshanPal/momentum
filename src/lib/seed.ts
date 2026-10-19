@@ -2,6 +2,10 @@ import { pool } from "./db";
 import type { Mom } from "./schema";
 
 // Synthetic agency project. No real client data. Re-runnable: wipes everything first.
+// Fixed IDs so demo links survive a reset.
+export const DEMO_PROJECT_ID = "00000000-0000-4000-8000-000000000001";
+const M1_ID = "00000000-0000-4000-8000-000000000011";
+const M2_ID = "00000000-0000-4000-8000-000000000012";
 
 const M1_NOTES = `HAIRO redesign kickoff - 6 Oct
 attendees: Priya (HAIRO), Meera, Rohan, Arjun, Kavya, Arman
@@ -198,8 +202,8 @@ export async function seed() {
     const {
       rows: [p],
     } = await c.query<{ id: string }>(
-      `insert into projects (name, client, description) values ($1, $2, $3) returning id`,
-      ["HAIRO — Website Redesign", "HAIRO Haircare", "WordPress to Webflow rebuild. Agency team: design, dev, media, CRM."],
+      `insert into projects (id, name, client, description) values ($4, $1, $2, $3) returning id`,
+      ["HAIRO — Website Redesign", "HAIRO Haircare", "WordPress to Webflow rebuild. Agency team: design, dev, media, CRM.", DEMO_PROJECT_ID],
     );
 
     const participants = [
@@ -211,19 +215,20 @@ export async function seed() {
       "Arman (Catalys)",
     ];
 
-    const insertMeeting = async (title: string, held_on: string, who: string[], notes: string, mom: Mom) => {
+    const insertMeeting = async (id: string, title: string, held_on: string, who: string[], notes: string, mom: Mom) => {
       const {
         rows: [m],
       } = await c.query<{ id: string }>(
-        `insert into meetings (project_id, title, held_on, participants, raw_notes, mom, status, published_at)
-         values ($1,$2,$3,$4,$5,$6,'published', $3::date + time '11:00') returning id`,
-        [p.id, title, held_on, JSON.stringify(who), notes, JSON.stringify(mom)],
+        `insert into meetings (id, project_id, title, held_on, participants, raw_notes, mom, status, published_at)
+         values ($7,$1,$2,$3,$4,$5,$6,'published', $3::date + time '11:00') returning id`,
+        [p.id, title, held_on, JSON.stringify(who), notes, JSON.stringify(mom), id],
       );
       return m.id;
     };
 
-    const m1 = await insertMeeting("Kickoff", "2026-10-06", participants, M1_NOTES, M1_MOM);
+    const m1 = await insertMeeting(M1_ID, "Kickoff", "2026-10-06", participants, M1_NOTES, M1_MOM);
     const m2 = await insertMeeting(
+      M2_ID,
       "Design review",
       "2026-10-13",
       participants.filter((x) => !x.startsWith("Kavya")),
