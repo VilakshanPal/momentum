@@ -6,6 +6,7 @@ import { generateDraft, publishMeeting, saveDraft, saveMeeting } from "@/lib/act
 import { MAX_NOTES_CHARS, type Draft, type Item, type Meeting } from "@/lib/schema";
 import { ItemRow } from "./ItemRow";
 import { Pill, Spinner, fmtDate, LABEL } from "./ui";
+import { DateCell } from "./DateCell";
 
 type Props = {
   meeting: Meeting;
@@ -228,8 +229,7 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
             <textarea value={a.title} onChange={(e) => upd("actions", i, { title: e.target.value })} className="quiet w-full font-medium resize-none" rows={1} />
             <div className="mt-1 flex items-center gap-3 text-[13px]">
               <input value={a.owner ?? ""} onChange={(e) => upd("actions", i, { owner: e.target.value || null })} placeholder="Unassigned" className={`quiet w-36 ${a.owner ? "" : "italic text-ink-3"}`} />
-              <input type="date" value={a.due_on ?? ""} onChange={(e) => upd("actions", i, { due_on: e.target.value || null })} className={`quiet ${a.due_on ? "" : "text-ink-3"}`} />
-              {!a.due_on && <span className="text-xs text-ink-3 italic -ml-1">No date</span>}
+              <DateCell value={a.due_on} onChange={(v) => upd("actions", i, { due_on: v })} />
             </div>
             <input value={a.blocker ?? ""} onChange={(e) => upd("actions", i, { blocker: e.target.value || null })} placeholder="Blocked by / depends on (optional)" className={`quiet w-full mt-1 text-[13px] ${a.blocker ? "text-t-red-fg" : ""}`} />
             {a.evidence && <p className="evidence mt-1.5">“{a.evidence}”</p>}

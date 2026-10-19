@@ -6,6 +6,9 @@ import { SAMPLE_NOTES } from "@/lib/seed";
 import { MeetingEditor } from "@/components/MeetingEditor";
 import { MeetingView } from "@/components/MeetingView";
 
+// LLM generation can take a while on long notes; allow the server action up to 60s (Vercel Hobby ceiling).
+export const maxDuration = 60;
+
 export default async function MeetingPage({ params }: { params: Promise<{ id: string; mid: string }> }) {
   const { id, mid } = await params;
   const meeting = await getMeeting(mid);

@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { updateItem } from "@/lib/actions";
 import { ITEM_STATUSES, type Item } from "@/lib/schema";
 import { Pill, fmtDate, LABEL } from "./ui";
+import { DateCell } from "./DateCell";
 
 // One persistent record, editable inline. Used on the board, the open-work rail and the carried-forward panel.
 export function ItemRow({ item: initial, projectId, compact = false }: { item: Item; projectId: string; compact?: boolean }) {
@@ -59,7 +60,7 @@ export function ItemRow({ item: initial, projectId, compact = false }: { item: I
       <input className={`quiet py-1 ${item.owner ? "" : "italic text-ink-3"}`} placeholder="Unassigned" defaultValue={item.owner ?? ""} onBlur={(e) => (e.target.value.trim() || null) !== item.owner && patch({ owner: e.target.value.trim() || null })} />
       {item.kind === "action" && (
         <>
-          <input type="date" className={`quiet py-1 text-[13px] ${item.due_on ? "" : "text-ink-3"}`} value={item.due_on ?? ""} onChange={(e) => patch({ due_on: e.target.value || null })} />
+          <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} />
           <input className={`quiet py-1 truncate ${item.blocker ? "text-t-red-fg" : "italic text-ink-3"}`} placeholder="—" defaultValue={item.blocker ?? ""} onBlur={(e) => (e.target.value.trim() || null) !== item.blocker && patch({ blocker: e.target.value.trim() || null })} />
         </>
       )}
