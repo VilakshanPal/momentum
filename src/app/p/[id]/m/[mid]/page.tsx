@@ -1,6 +1,5 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { carriedItems, getMeeting, getProject, listMeetingItems, supersedableDecisions } from "@/lib/data";
+import { carriedItems, getMeeting, getProject, listMeetingItems, projectPeople, supersedableDecisions } from "@/lib/data";
 import { momToMarkdown } from "@/lib/markdown";
 import { SAMPLE_NOTES } from "@/lib/seed";
 import { MeetingEditor } from "@/components/MeetingEditor";
@@ -14,19 +13,13 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   const meeting = await getMeeting(mid);
   if (!meeting || meeting.project_id !== id) notFound();
   const project = (await getProject(id))!;
-  const carried = await carriedItems(id, meeting);
-
-  const crumb = (
-    <Link href={`/p/${id}`} className="text-xs text-ink-3 hover:text-ink">
-      ← {project.name}
-    </Link>
-  );
+  const [carried, people] = await Promise.all([carriedItems(id, meeting), projectPeople(id)]);
 
   if (meeting.status === "published") {
     const items = await listMeetingItems(mid);
-    return <MeetingView meeting={meeting} items={items} carried={carried} projectId={id} crumb={crumb} markdown={momToMarkdown(meeting, items, project.name)} />;
+    return <MeetingView meeting={meeting} projectName={project.name} projectId={id} items={items} carried={carried} people={people} markdown={momToMarkdown(meeting, items, project.name)} />;
   }
 
   const supersedable = await supersedableDecisions(id);
-  return <MeetingEditor meeting={meeting} carried={carried} supersedable={supersedable} projectId={id} crumb={crumb} sampleNotes={SAMPLE_NOTES} />;
+  return <MeetingEditor meeting={meeting} projectName={project.name} projectId={id} carried={carried} supersedable={supersedable} people={people} sampleNotes={SAMPLE_NOTES} />;
 }

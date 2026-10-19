@@ -1,7 +1,10 @@
 import { Pool, types, type QueryResultRow } from "pg";
 
-// Return DATE columns as 'YYYY-MM-DD' strings instead of JS Dates (avoids timezone shifts).
+// Return DATE as 'YYYY-MM-DD' and TIMESTAMPTZ as ISO strings instead of JS Dates
+// (no timezone shifts, and the values can be passed to client components as-is).
 types.setTypeParser(1082, (v) => v);
+types.setTypeParser(1184, (v) => new Date(v).toISOString());
+types.setTypeParser(1114, (v) => new Date(v + "Z").toISOString());
 
 // One pool per process. globalThis keeps it alive across Next dev hot reloads.
 const g = globalThis as unknown as { __pool?: Pool };

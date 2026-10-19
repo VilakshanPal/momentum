@@ -4,39 +4,39 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
-  /* Notion-like neutrals */
-  --color-ink: #37352f;
-  --color-ink-2: #6f6e69;
-  --color-ink-3: #9b9a97;
-  --color-line: #e9e9e7;
-  --color-line-2: #dcdcda;
+  --color-ink: #1f1f1f;
+  --color-ink-2: #5f5e5a;
+  --color-ink-3: #9a9994;
+  --color-line: #ebebe9;
+  --color-line-2: #dededc;
   --color-paper: #ffffff;
   --color-paper-2: #f7f7f5;
   --color-paper-3: #efefed;
-  --color-paper-4: #e8e8e6;
+  --color-paper-4: #e6e6e3;
 
-  /* one accent */
   --color-accent: #4f46c6;
   --color-accent-2: #3f37ad;
-  --color-accent-soft: #ecebfa;
+  --color-accent-soft: #eeedfb;
 
-  /* status tints */
   --color-t-gray-bg: #f1f1ef;
-  --color-t-gray-fg: #5f5e5a;
-  --color-t-blue-bg: #e6eff9;
-  --color-t-blue-fg: #2b5fa8;
-  --color-t-green-bg: #e2f1e6;
-  --color-t-green-fg: #27703f;
-  --color-t-red-bg: #fbe8e6;
-  --color-t-red-fg: #b1402f;
-  --color-t-amber-bg: #fbf0dc;
-  --color-t-amber-fg: #8d6416;
-  --color-t-orange-bg: #fbe8dc;
-  --color-t-orange-fg: #ad5417;
-  --color-t-purple-bg: #ece8f8;
-  --color-t-purple-fg: #6240b0;
+  --color-t-gray-fg: #6b6a66;
+  --color-t-blue-bg: #e4eef9;
+  --color-t-blue-fg: #2a62b0;
+  --color-t-green-bg: #e1f1e6;
+  --color-t-green-fg: #217a3c;
+  --color-t-red-bg: #fbe7e5;
+  --color-t-red-fg: #b4402e;
+  --color-t-amber-bg: #fbf0d9;
+  --color-t-amber-fg: #8a6213;
+  --color-t-orange-bg: #fbe8da;
+  --color-t-orange-fg: #b1521a;
+  --color-t-purple-bg: #ece8f9;
+  --color-t-purple-fg: #6440b5;
+  --color-t-teal-bg: #ddf2ef;
+  --color-t-teal-fg: #1f7a6e;
 
-  --shadow-pop: 0 1px 2px rgba(15, 15, 15, 0.06), 0 4px 16px rgba(15, 15, 15, 0.08);
+  --shadow-pop: 0 1px 2px rgba(0, 0, 0, 0.05), 0 6px 20px rgba(0, 0, 0, 0.1);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 html,
@@ -52,26 +52,33 @@ body {
   background: #d3e3fd;
 }
 
-/* Inputs that look like text until focused (Notion-style inline editing) */
-.quiet {
-  @apply bg-transparent outline-none rounded-sm px-1 -mx-1 border border-transparent;
-}
-.quiet:hover {
-  @apply bg-paper-3;
-}
-.quiet:focus {
-  @apply bg-paper border-line-2 shadow-pop;
+*:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+  border-radius: 4px;
 }
 
 textarea {
   field-sizing: content;
 }
 
+/* Inline editable text: looks like text, becomes a field on hover/focus */
+.quiet {
+  @apply bg-transparent outline-none rounded px-1 -mx-1 border border-transparent min-w-0;
+}
+.quiet:hover {
+  @apply bg-paper-3;
+}
+.quiet:focus,
+.quiet:focus-visible {
+  @apply bg-paper border-line-2 shadow-pop outline-none;
+}
+
 .btn {
-  @apply inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-medium border border-line-2 bg-paper text-ink transition-colors select-none;
+  @apply inline-flex items-center gap-1.5 h-8 px-3 rounded-md text-[13px] font-medium border border-line-2 bg-paper text-ink shadow-sm transition-colors select-none whitespace-nowrap;
 }
 .btn:hover {
-  @apply bg-paper-3;
+  @apply bg-paper-2;
 }
 .btn:disabled {
   @apply opacity-50 cursor-not-allowed;
@@ -83,13 +90,16 @@ textarea {
   @apply bg-accent-2 border-accent-2;
 }
 .btn-ghost {
-  @apply border-transparent bg-transparent text-ink-2;
+  @apply border-transparent bg-transparent text-ink-2 shadow-none;
 }
 .btn-ghost:hover {
   @apply bg-paper-3 text-ink;
 }
 .btn-sm {
-  @apply h-7 px-2 text-xs;
+  @apply h-7 px-2 text-xs gap-1;
+}
+.btn-icon {
+  @apply size-7 p-0 justify-center;
 }
 
 .card {
@@ -97,15 +107,26 @@ textarea {
 }
 
 .label {
-  @apply text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3;
+  @apply text-[11px] font-semibold uppercase tracking-[0.07em] text-ink-3;
+}
+
+.chip {
+  @apply inline-flex items-center gap-1 h-6 px-1.5 rounded-md bg-paper-3 text-ink-2 text-xs whitespace-nowrap;
 }
 
 .evidence {
-  @apply text-xs text-ink-2 border-l-2 border-line-2 pl-2 italic;
+  @apply text-[12.5px] text-ink-3 pl-2.5 border-l-2 border-line-2 leading-snug;
 }
 
 .row-hover:hover {
   background: var(--color-paper-2);
+}
+
+.menu {
+  @apply absolute z-30 min-w-44 bg-paper border border-line-2 rounded-lg shadow-pop p-1 text-[13px];
+}
+.menu-item {
+  @apply flex items-center gap-2 w-full h-8 px-2 rounded-md text-left text-ink hover:bg-paper-3;
 }
 
 .spin {
@@ -126,5 +147,15 @@ textarea {
 @keyframes shimmer {
   to {
     background-position: -200% 0;
+  }
+}
+
+.fade-in {
+  animation: fade 0.25s ease-out;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
   }
 }

@@ -1,4 +1,4 @@
-# Plot — where the build is and where it is going
+# Plot · where the build is and where it is going
 
 Updated at the end of every work block. Read this first.
 
@@ -21,7 +21,8 @@ Updated at the end of every work block. Read this first.
 | 13 | `next build` clean; walkthrough of demo story in browser | done (dev session, not incognito yet) |
 | 14 | Deploy to Vercel + Supabase | blocked: credentials |
 | 15 | Real-LLM test of generation + follow-up on the seeded sample notes; tune prompt | blocked: ANTHROPIC_API_KEY |
-| 16 | Visual polish pass (empty-state copy, date input placeholders, keyboard flow) | todo |
+| 16 | UI rebuilt: icons, avatars, status menus, grouped board, timeline log, top bars, sticky notes pane | done |
+| 16b | Mock LLM with golden drafts for the sample notes and a Fireflies-style transcript; both flows walked in Chrome | done |
 | 17 | Fresh/incognito walkthrough on the deployed URL | todo (after 14) |
 | 18 | ClickUp one-way export | decide 27 Oct |
 
@@ -43,6 +44,7 @@ Updated at the end of every work block. Read this first.
 See README.md. `npm run db` → `npm run db:migrate` → `npm run db:seed` → `npm run dev`.
 
 ## Log
+- 2026-10-20 03:30: UI rebuilt after feedback (generic look rejected). Tested sample-notes flow and pasted-transcript flow end to end with the mock, including participants auto-fill, carried-forward updates, publish, board, decisions. Em dashes removed everywhere. Production build clean.
 - 2026-10-20 00:30: Plan accepted. Build started. Decisions 1–8 recorded.
 - 2026-10-20 01:45: Demo IDs pinned, reset verified in browser, polish commit.
 - 2026-10-20 01:30: Core loop built and walked through in Chrome with the mock LLM: new meeting → sample notes → draft → tick carried update → publish → board shows live records, carried item marked done, follow-up drafted, Markdown copy. Production build clean. First commit.

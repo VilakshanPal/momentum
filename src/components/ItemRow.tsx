@@ -2,18 +2,22 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
+import { CalendarDays, OctagonAlert } from "lucide-react";
 import { updateItem } from "@/lib/actions";
-import { ITEM_STATUSES, type Item } from "@/lib/schema";
-import { Pill, fmtDate, LABEL } from "./ui";
+import type { Item } from "@/lib/schema";
+import { ACTION_COLS, QUESTION_COLS, Avatar, Person, fmtDate } from "./ui";
+import { StatusMenu } from "./StatusMenu";
 import { DateCell } from "./DateCell";
 
-// One persistent record, editable inline. Used on the board, the open-work rail and the carried-forward panel.
-export function ItemRow({ item: initial, projectId, compact = false }: { item: Item; projectId: string; compact?: boolean }) {
+// One persistent record with optimistic inline edits. Three presentations share the hook.
+
+type Patch = Parameters<typeof updateItem>[1];
+
+function useItem(initial: Item) {
   const [item, setItem] = useState(initial);
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
-
-  const patch = (p: Parameters<typeof updateItem>[1]) => {
+  const patch = (p: Patch) => {
     const prev = item;
     setItem({ ...item, ...(p as Partial<Item>) });
     setErr(null);
@@ -22,73 +26,121 @@ export function ItemRow({ item: initial, projectId, compact = false }: { item: I
       if (!r.ok) {
         setItem(prev);
         setErr(r.error);
-      } else setItem(r.data);
+      } else setItem({ ...item, ...r.data });
     });
   };
+  return { item, patch, err, pending };
+}
 
-  const origin = (
-    <Link href={`/p/${projectId}/m/${item.meeting_id}`} className="text-ink-3 hover:text-ink hover:underline whitespace-nowrap" title="Originating meeting">
+function Origin({ item, projectId }: { item: Item; projectId: string }) {
+  return (
+    <Link href={`/p/${projectId}/m/${item.meeting_id}`} className="inline-flex items-center gap-1 text-xs text-ink-3 hover:text-ink whitespace-nowrap" title="Originating meeting">
+      <CalendarDays className="size-3" />
       {item.meeting_title} · {fmtDate(item.meeting_held_on)}
     </Link>
   );
+}
 
-  if (compact)
-    return (
-      <div className={`px-3 py-2 text-[13px] ${pending ? "opacity-60" : ""}`}>
-        <div className="flex items-start gap-2">
-          <StatusSelect item={item} onChange={(s) => patch({ status: s })} />
-          <span className="flex-1 leading-snug">{item.title}</span>
-        </div>
-        <div className="mt-1 ml-0.5 flex items-center gap-2 text-xs text-ink-3">
-          <span className={item.owner ? "text-ink-2" : "italic"}>{item.owner ?? "Unassigned"}</span>
-          {item.kind === "action" && <span className={item.due_on ? "text-ink-2" : "italic"}>· {item.due_on ? fmtDate(item.due_on) : "No date"}</span>}
-          <span className="ml-auto">{origin}</span>
-        </div>
-        {item.blocker && <p className="mt-1 text-xs text-t-red-fg">Blocked: {item.blocker}</p>}
-        {err && <p className="mt-1 text-xs text-t-red-fg">{err}</p>}
-      </div>
-    );
-
+function OwnerInput({ value, onChange, className = "" }: { value: string | null; onChange: (v: string | null) => void; className?: string }) {
   return (
-    <div className={`row-hover grid items-center gap-3 px-3 min-h-11 text-[13px] ${item.kind === "action" ? "grid-cols-[1fr_120px_140px_110px_1fr_170px]" : "grid-cols-[1fr_120px_140px_170px]"} ${pending ? "opacity-60" : ""}`}>
+    <span className={`inline-flex items-center gap-1.5 min-w-0 ${className}`}>
+      {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-line-2 shrink-0" />}
       <input
-        className="quiet py-1 font-medium truncate"
+        list="people"
+        className={`quiet h-7 w-full text-[13px] ${value ? "" : "italic text-ink-3"}`}
+        placeholder="Unassigned"
+        defaultValue={value ?? ""}
+        onBlur={(e) => (e.target.value.trim() || null) !== value && onChange(e.target.value.trim() || null)}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      />
+    </span>
+  );
+}
+
+// Compact: rails and panels.
+export function OpenItem({ item: initial, projectId }: { item: Item; projectId: string }) {
+  const { item, patch, err, pending } = useItem(initial);
+  return (
+    <div className={`px-3 py-2.5 flex flex-col gap-1.5 ${pending ? "opacity-60" : ""}`}>
+      <div className="flex items-start gap-2">
+        <span className="mt-px">
+          <StatusMenu kind={item.kind} value={item.status} onChange={(s) => patch({ status: s })} />
+        </span>
+      </div>
+      <p className="text-[13px] leading-snug -mt-1 pl-0.5">{item.title}</p>
+      <div className="flex items-center gap-3 text-xs text-ink-3 pl-0.5">
+        <Person name={item.owner} muted />
+        {item.kind === "action" && <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} />}
+        <span className="ml-auto">
+          <Origin item={item} projectId={projectId} />
+        </span>
+      </div>
+      {item.blocker && (
+        <p className="text-xs text-t-red-fg flex items-start gap-1 pl-0.5">
+          <OctagonAlert className="size-3 mt-0.5 shrink-0" /> {item.blocker}
+        </p>
+      )}
+      {err && <p className="text-xs text-t-red-fg">{err}</p>}
+    </div>
+  );
+}
+
+// Board rows.
+export function ActionRow({ item: initial, projectId }: { item: Item; projectId: string }) {
+  const { item, patch, err, pending } = useItem(initial);
+  return (
+    <div className={`row-hover grid ${ACTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
+      <input
+        className={`quiet h-7 font-medium truncate ${item.status === "done" ? "text-ink-3 line-through" : ""}`}
         defaultValue={item.title}
         onBlur={(e) => e.target.value.trim() && e.target.value !== item.title && patch({ title: e.target.value.trim() })}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       />
-      <StatusSelect item={item} onChange={(s) => patch({ status: s })} />
-      <input className={`quiet py-1 ${item.owner ? "" : "italic text-ink-3"}`} placeholder="Unassigned" defaultValue={item.owner ?? ""} onBlur={(e) => (e.target.value.trim() || null) !== item.owner && patch({ owner: e.target.value.trim() || null })} />
-      {item.kind === "action" && (
-        <>
-          <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} />
-          <input className={`quiet py-1 truncate ${item.blocker ? "text-t-red-fg" : "italic text-ink-3"}`} placeholder="—" defaultValue={item.blocker ?? ""} onBlur={(e) => (e.target.value.trim() || null) !== item.blocker && patch({ blocker: e.target.value.trim() || null })} />
-        </>
-      )}
-      <span className="text-xs truncate text-right">{origin}</span>
+      <StatusMenu kind="action" value={item.status} onChange={(s) => patch({ status: s })} />
+      <OwnerInput value={item.owner} onChange={(v) => patch({ owner: v })} />
+      <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} />
+      <input
+        className={`quiet h-7 truncate text-[13px] ${item.blocker ? "text-t-red-fg" : "text-ink-3"}`}
+        placeholder="Nothing"
+        defaultValue={item.blocker ?? ""}
+        onBlur={(e) => (e.target.value.trim() || null) !== item.blocker && patch({ blocker: e.target.value.trim() || null })}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      />
+      <span className="truncate text-right">
+        <Origin item={item} projectId={projectId} />
+      </span>
       {err && <p className="col-span-full text-xs text-t-red-fg pb-1">{err}</p>}
     </div>
   );
 }
 
-export function StatusSelect({ item, onChange }: { item: Pick<Item, "kind" | "status">; onChange: (s: string) => void }) {
+export function QuestionRow({ item: initial, projectId }: { item: Item; projectId: string }) {
+  const { item, patch, err, pending } = useItem(initial);
   return (
-    <span className="relative inline-flex">
-      <Pill value={item.status} className="pr-4" />
-      <select
-        aria-label="Status"
-        className="absolute inset-0 opacity-0 cursor-pointer"
-        value={item.status}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {ITEM_STATUSES[item.kind].map((s) => (
-          <option key={s} value={s} disabled={s === "superseded"}>
-            {LABEL[s]}
-          </option>
-        ))}
-      </select>
-      <svg className="absolute right-1 top-1/2 -translate-y-1/2 size-2.5 pointer-events-none opacity-60" viewBox="0 0 10 10">
-        <path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" strokeWidth="1.5" />
-      </svg>
-    </span>
+    <div className={`row-hover grid ${QUESTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
+      <input
+        className={`quiet h-7 font-medium truncate ${item.status === "resolved" ? "text-ink-3" : ""}`}
+        defaultValue={item.title}
+        onBlur={(e) => e.target.value.trim() && e.target.value !== item.title && patch({ title: e.target.value.trim() })}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+      />
+      <StatusMenu kind="question" value={item.status} onChange={(s) => patch({ status: s })} />
+      <OwnerInput value={item.owner} onChange={(v) => patch({ owner: v })} />
+      <span className="truncate text-right">
+        <Origin item={item} projectId={projectId} />
+      </span>
+      {err && <p className="col-span-full text-xs text-t-red-fg pb-1">{err}</p>}
+    </div>
+  );
+}
+
+// Datalist of known people, rendered once per page so owner inputs can autocomplete.
+export function PeopleList({ people }: { people: string[] }) {
+  return (
+    <datalist id="people">
+      {people.map((p) => (
+        <option key={p} value={p.replace(/\s*\(.*?\)\s*/g, "")} />
+      ))}
+    </datalist>
   );
 }

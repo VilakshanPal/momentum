@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Copy } from "lucide-react";
 
 export function CopyButton({ text, label = "Copy", small = false }: { text: string; label?: string; small?: boolean }) {
   const [done, setDone] = useState(false);
@@ -17,6 +18,7 @@ export function CopyButton({ text, label = "Copy", small = false }: { text: stri
         }
       }}
     >
+      {done ? <Check className="size-3.5 text-t-green-fg" /> : <Copy className="size-3.5" />}
       {done ? "Copied" : label}
     </button>
   );

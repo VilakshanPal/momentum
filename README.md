@@ -26,6 +26,6 @@ No sign-in. Everything is server actions against Postgres; no credentials reach 
 
 ## Docs
 
-- `docs/plot.md` — where the build is and what is next.
-- `docs/decisions.md` — every consequential decision and why.
-- `product (1).md` — the product spec.
+- `docs/plot.md` · where the build is and what is next.
+- `docs/decisions.md` · every consequential decision and why.
+- `product (1).md` · the product spec.

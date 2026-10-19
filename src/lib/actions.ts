@@ -91,7 +91,8 @@ export async function generateDraft(meetingId: string, raw_notes: string): Promi
       actions: mom.actions.map((a) => ({ ...a, due_on: cleanDate(a.due_on) })),
       carried_updates: mom.carried_updates.map((u) => ({ ...u, accepted: false })),
     };
-    await q(`update meetings set mom=$2, updated_at=now() where id=$1`, [meetingId, JSON.stringify(draft)]);
+    const fill = !meeting.participants.length && draft.participants.length ? draft.participants.slice(0, 30).map((p) => p.slice(0, 80)) : null;
+    await q(`update meetings set mom=$2, participants=coalesce($3, participants), updated_at=now() where id=$1`, [meetingId, JSON.stringify(draft), fill ? JSON.stringify(fill) : null]);
     return { ok: true, data: draft };
   } catch (e) {
     console.error("generateDraft failed", e);
@@ -170,7 +171,7 @@ export async function publishMeeting(meetingId: string, draft: Draft): Promise<R
       if (!u.accepted) continue;
       const row = (await c.query<{ kind: ItemKind }>(`select kind from items where id=$1 and project_id=$2`, [u.item_id, pid])).rows[0];
       if (!row || !statusOk(row.kind, u.suggested_status)) continue;
-      await c.query(`update items set status=$2, updated_at=now() where id=$1`, [u.item_id, u.suggested_status]);
+      await c.query(`update items set status=$2, blocker=case when $2 = 'blocked' then blocker else null end, updated_at=now() where id=$1`, [u.item_id, u.suggested_status]);
     }
 
     await c.query(`update meetings set mom=$2, status='published', published_at=now(), updated_at=now() where id=$1`, [
@@ -208,13 +209,16 @@ export async function updateItem(id: string, patch: z.infer<typeof PatchSchema>)
   const p = parsed.data;
   if (p.status !== undefined && !statusOk(cur.kind, p.status)) return { ok: false, error: `"${p.status}" is not a valid status for a ${cur.kind}.` };
 
+  const status = p.status ?? cur.status;
+  const blockerIn = p.blocker === undefined ? cur.blocker : cleanText(p.blocker, 500);
   const next = {
     title: p.title ?? cur.title,
     detail: p.detail === undefined ? cur.detail : cleanText(p.detail),
     owner: p.owner === undefined ? cur.owner : cleanText(p.owner, 80),
     due_on: p.due_on === undefined ? cur.due_on : cleanDate(p.due_on),
-    status: p.status ?? cur.status,
-    blocker: p.blocker === undefined ? cur.blocker : cleanText(p.blocker, 500),
+    // Leaving "blocked" clears the blocker; typing a blocker on a to-do marks it blocked.
+    status: cur.kind === "action" && blockerIn && status === "todo" && p.status === undefined ? "blocked" : status,
+    blocker: cur.kind === "action" && status !== "blocked" && p.status !== undefined ? null : blockerIn,
   };
   const row = await one<Item>(
     `update items set title=$2, detail=$3, owner=$4, due_on=$5, status=$6, blocker=$7, updated_at=now() where id=$1 returning *`,

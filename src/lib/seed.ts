@@ -22,6 +22,7 @@ Copy - who signs off on final copy? Priya thinks the founder wants to see it but
 next sync tuesday 13th`;
 
 const M1_MOM: Mom = {
+  participants: [],
   summary:
     "Kickoff for the HAIRO website redesign. The team agreed to rebuild on Webflow, keep the hairo.in domain, and target a 15 November launch ahead of the Diwali campaign. Brand guidelines and copy sign-off ownership are outstanding on the client side.",
   discussion_points: [
@@ -108,6 +109,7 @@ Checkout - Rohan asked if they use Razorpay or Stripe, Priya didn't know, will f
 Webflow workspace is set up, Rohan shared the invite`;
 
 const M2_MOM: Mom = {
+  participants: [],
   summary:
     "Design review of wireframes. Direction approved with a product-led hero. Missing product photography blocks the product listing page, so launch moves from 15 to 29 November. Brand guidelines are still outstanding. Paid landing pages stay on Unbounce.",
   discussion_points: [
@@ -203,7 +205,7 @@ export async function seed() {
       rows: [p],
     } = await c.query<{ id: string }>(
       `insert into projects (id, name, client, description) values ($4, $1, $2, $3) returning id`,
-      ["HAIRO — Website Redesign", "HAIRO Haircare", "WordPress to Webflow rebuild. Agency team: design, dev, media, CRM.", DEMO_PROJECT_ID],
+      ["HAIRO Website Redesign", "HAIRO Haircare", "WordPress to Webflow rebuild. Agency team: design, dev, media, CRM.", DEMO_PROJECT_ID],
     );
 
     const participants = [

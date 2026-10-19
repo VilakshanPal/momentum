@@ -34,6 +34,7 @@ const CarriedUpdate = z.object({
 });
 
 export const MomSchema = z.object({
+  participants: z.array(z.string()), // names the notes identify as attendees; empty if none
   summary: z.string(),
   discussion_points: z.array(z.string()),
   decisions: z.array(Decision),

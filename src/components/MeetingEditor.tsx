@@ -2,26 +2,29 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Briefcase, CalendarDays, CircleHelp, FileText, Gavel, ListChecks, Mic, PenLine, Plus, RotateCw, Sparkles, Users, X } from "lucide-react";
 import { generateDraft, publishMeeting, saveDraft, saveMeeting } from "@/lib/actions";
 import { MAX_NOTES_CHARS, type Draft, type Item, type Meeting } from "@/lib/schema";
-import { ItemRow } from "./ItemRow";
-import { Pill, Spinner, fmtDate, LABEL } from "./ui";
+import { OpenItem, PeopleList } from "./ItemRow";
+import { TopBar } from "./TopBar";
 import { DateCell } from "./DateCell";
+import { Avatar, Spinner, Status, fmtDate } from "./ui";
 
 type Props = {
   meeting: Meeting;
+  projectName: string;
+  projectId: string;
   carried: Item[];
   supersedable: Item[];
-  projectId: string;
-  crumb: React.ReactNode;
+  people: string[];
   sampleNotes: string;
 };
 
-export function MeetingEditor({ meeting, carried, supersedable, projectId, crumb, sampleNotes }: Props) {
+export function MeetingEditor({ meeting, projectName, projectId, carried, supersedable, people, sampleNotes }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(meeting.title);
   const [heldOn, setHeldOn] = useState(meeting.held_on);
-  const [people, setPeople] = useState(meeting.participants.join(", "));
+  const [peopleText, setPeopleText] = useState(meeting.participants.join(", "));
   const [notes, setNotes] = useState(meeting.raw_notes);
   const [draft, setDraft] = useState<Draft | null>(meeting.mom);
   const [save, setSave] = useState<"saved" | "saving" | "dirty" | "error">("saved");
@@ -30,21 +33,22 @@ export function MeetingEditor({ meeting, carried, supersedable, projectId, crumb
   const [generating, startGen] = useTransition();
   const [publishing, startPub] = useTransition();
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const first = useRef(true);
+  const skipNext = useRef(true);
 
-  const participants = () => people.split(",").map((s) => s.trim()).filter(Boolean);
+  const participants = () => peopleText.split(",").map((s) => s.trim()).filter(Boolean);
+  const meta = () => ({ title: title.trim() || "Untitled meeting", held_on: heldOn, participants: participants(), raw_notes: notes });
 
-  // Debounced autosave of meta + notes + draft. Nothing here creates project records.
+  // Debounced autosave. Nothing here creates project records; that only happens on publish.
   useEffect(() => {
-    if (first.current) {
-      first.current = false;
+    if (skipNext.current) {
+      skipNext.current = false;
       return;
     }
     setSave("dirty");
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       setSave("saving");
-      const a = await saveMeeting(meeting.id, { title: title.trim() || "Untitled meeting", held_on: heldOn, participants: participants(), raw_notes: notes });
+      const a = await saveMeeting(meeting.id, meta());
       const b = draft ? await saveDraft(meeting.id, draft) : { ok: true as const };
       setSave(a.ok && b.ok ? "saved" : "error");
     }, 700);
@@ -52,17 +56,20 @@ export function MeetingEditor({ meeting, carried, supersedable, projectId, crumb
       if (timer.current) clearTimeout(timer.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, heldOn, people, notes, draft]);
+  }, [title, heldOn, peopleText, notes, draft]);
 
   const generate = () => {
     setGenErr(null);
     startGen(async () => {
-      // flush meta first so the model sees the right title/date/participants
-      await saveMeeting(meeting.id, { title: title.trim() || "Untitled meeting", held_on: heldOn, participants: participants(), raw_notes: notes });
+      await saveMeeting(meeting.id, meta());
       const r = await generateDraft(meeting.id, notes);
       if (r.ok) {
-        first.current = true; // the server already saved this draft; skip one autosave
+        skipNext.current = true;
         setDraft(r.data);
+        if (!peopleText.trim() && r.data.participants.length) {
+          skipNext.current = true;
+          setPeopleText(r.data.participants.join(", "));
+        }
         setSave("saved");
       } else setGenErr(r.error);
     });
@@ -79,73 +86,105 @@ export function MeetingEditor({ meeting, carried, supersedable, projectId, crumb
   };
 
   const over = notes.length > MAX_NOTES_CHARS;
+  const tooShort = notes.trim().length < 20;
 
   return (
-    <div className="min-h-full flex flex-col">
-      <header className="px-10 pt-5 pb-4 border-b border-line sticky top-0 bg-paper/95 backdrop-blur z-10">
-        {crumb}
-        <div className="flex items-center gap-3 mt-1">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} className="quiet text-[22px] font-semibold tracking-tight flex-1 min-w-0" placeholder="Meeting title" />
-          <Pill value="draft" />
-          <span className="text-xs text-ink-3 w-24 text-right">{{ saved: "Saved", saving: "Saving…", dirty: "Unsaved", error: "Save failed" }[save]}</span>
-          <button className="btn" onClick={generate} disabled={generating || over || notes.trim().length < 20}>
-            {generating ? <Spinner /> : null}
-            {draft ? "Regenerate draft" : "Generate draft"}
-          </button>
-          <button className="btn btn-primary" onClick={publish} disabled={!draft || publishing || generating}>
-            {publishing ? <Spinner /> : null}
-            Publish
-          </button>
-        </div>
-        <div className="flex items-center gap-4 mt-1 text-[13px] text-ink-2">
-          <input type="date" value={heldOn} onChange={(e) => setHeldOn(e.target.value)} className="quiet" />
-          <input value={people} onChange={(e) => setPeople(e.target.value)} className="quiet flex-1 min-w-0" placeholder="Participants, comma separated" />
+    <>
+      <TopBar crumbs={[{ label: projectName, href: `/p/${projectId}`, icon: Briefcase }, { label: title || "Untitled meeting", icon: PenLine }]}>
+        <span className={`text-xs mr-1 ${save === "error" ? "text-t-red-fg" : "text-ink-3"}`}>{{ saved: "Saved", saving: "Saving…", dirty: "Unsaved changes", error: "Save failed" }[save]}</span>
+        <button className="btn" onClick={generate} disabled={generating || over || tooShort} title={tooShort ? "Add some notes first" : undefined}>
+          {generating ? <Spinner /> : draft ? <RotateCw className="size-3.5" /> : <Sparkles className="size-3.5" />}
+          {draft ? "Regenerate" : "Generate draft"}
+        </button>
+        <button className="btn btn-primary" onClick={publish} disabled={!draft || publishing || generating} title={!draft ? "Generate and review a draft first" : "Create the records in this project"}>
+          {publishing && <Spinner />}
+          Publish
+        </button>
+      </TopBar>
+      <PeopleList people={people} />
+
+      <div className="px-8 pt-6 pb-4 border-b border-line">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} className="quiet text-[26px] font-semibold tracking-tight w-full leading-tight" placeholder="Untitled meeting" />
+        <div className="mt-2 flex items-center gap-5 text-[13px] text-ink-2">
+          <label className="inline-flex items-center gap-1.5">
+            <CalendarDays className="size-3.5 text-ink-3" />
+            <span className="relative inline-flex items-center hover:bg-paper-3 rounded px-1 -mx-1 h-7 cursor-pointer">
+              {fmtDate(heldOn, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+              <input type="date" value={heldOn} onChange={(e) => e.target.value && setHeldOn(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Meeting date" />
+            </span>
+          </label>
+          <label className="inline-flex items-center gap-1.5 flex-1 min-w-0">
+            <Users className="size-3.5 text-ink-3" />
+            <input value={peopleText} onChange={(e) => setPeopleText(e.target.value)} className="quiet h-7 flex-1 min-w-0" placeholder="Participants, comma separated" />
+          </label>
+          <Status value="draft" pill />
         </div>
         {pubErr && <p className="mt-2 text-xs text-t-red-fg">{pubErr}</p>}
-      </header>
+      </div>
 
-      <div className="flex-1 grid grid-cols-2 divide-x divide-line">
-        {/* Left: notes + carried forward */}
-        <section className="px-10 py-6 flex flex-col gap-6">
-          <div>
-            <div className="flex items-baseline justify-between mb-2">
-              <h2 className="label">Rough notes</h2>
-              <span className={`text-xs tabular-nums ${over ? "text-t-red-fg" : "text-ink-3"}`}>
+      <div className="flex-1 grid grid-cols-2 divide-x divide-line min-h-0">
+        {/* Notes */}
+        <section className="px-8 py-6 flex flex-col gap-6 min-w-0 sticky top-12 self-start max-h-[calc(100vh-48px)] overflow-y-auto">
+          <div className="card overflow-hidden">
+            <div className="h-10 px-3 flex items-center gap-2 border-b border-line bg-paper-2/60">
+              <FileText className="size-3.5 text-ink-3" />
+              <span className="text-[13px] font-medium">Rough notes</span>
+              <span className={`ml-auto text-xs tabular-nums ${over ? "text-t-red-fg" : "text-ink-3"}`}>
                 {notes.length.toLocaleString()} / {MAX_NOTES_CHARS.toLocaleString()}
               </span>
+              {!notes.trim() && (
+                <button className="btn btn-sm" onClick={() => setNotes(sampleNotes)}>
+                  Use sample notes
+                </button>
+              )}
             </div>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={"Type or paste rough notes, or a transcript from Fireflies.\nDictate with Wispr Flow: hold the key and talk."}
-              className="w-full min-h-[360px] leading-relaxed text-[14px] outline-none resize-none bg-transparent placeholder:text-ink-3"
+              placeholder={"Type here, paste a Fireflies transcript, or hold the Wispr Flow key and talk.\n\nRough is fine. Owners and dates are only picked up when you actually said them."}
+              className="w-full min-h-[440px] px-4 py-3 leading-relaxed text-[14px] outline-none resize-none bg-transparent placeholder:text-ink-3"
               spellCheck={false}
             />
-            {!notes.trim() && (
-              <button className="btn btn-sm" onClick={() => setNotes(sampleNotes)}>
-                Use sample notes
-              </button>
-            )}
           </div>
+          <p className="-mt-3 text-xs text-ink-3 inline-flex items-center gap-1.5">
+            <Mic className="size-3" /> Dictation and pasted transcripts both work. Nothing leaves this page until you publish.
+          </p>
 
           <div>
-            <h2 className="label mb-2">Carried forward into this meeting · {carried.length}</h2>
-            <p className="text-xs text-ink-3 -mt-1 mb-2">Still unresolved from earlier meetings. Same records, not copies. Update them here instead of re-adding them.</p>
+            <div className="flex items-center gap-2 mb-1">
+              <h2 className="text-[13px] font-semibold">Carried forward into this meeting</h2>
+              <span className="chip h-5 px-1.5 text-[11px] tabular-nums">{carried.length}</span>
+            </div>
+            <p className="text-xs text-ink-3 mb-2 leading-relaxed">Still unresolved from earlier meetings. Same records, not copies. Update them here instead of re-adding them.</p>
             <div className="card divide-y divide-line">
-              {carried.length ? carried.map((i) => <ItemRow key={i.id} item={i} compact projectId={projectId} />) : <p className="px-3 py-3 text-ink-3 text-[13px]">Nothing carried over.</p>}
+              {carried.length ? carried.map((i) => <OpenItem key={i.id} item={i} projectId={projectId} />) : <p className="px-3 py-3 text-ink-3 text-[13px]">Nothing carried over.</p>}
             </div>
           </div>
         </section>
 
-        {/* Right: draft */}
-        <section className="px-10 py-6 bg-paper-2/60">
-          <div className="flex items-baseline justify-between mb-2">
-            <h2 className="label">AI draft · review before publishing</h2>
-            {draft && <span className="text-xs text-ink-3">Edit anything. Remove what is wrong.</span>}
+        {/* Draft */}
+        <section className="px-8 py-6 bg-paper-2/50 min-w-0">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="size-4 text-accent" />
+            <h2 className="text-[13px] font-semibold">AI draft</h2>
+            <span className="text-xs text-ink-3">{draft ? "Review, edit, then publish. Remove anything wrong." : "Nothing generated yet."}</span>
+            {draft && (
+              <span className="ml-auto flex items-center gap-1.5 text-xs text-ink-2 tabular-nums">
+                <span className="chip">
+                  <Gavel className="size-3" /> {draft.decisions.length}
+                </span>
+                <span className="chip">
+                  <ListChecks className="size-3" /> {draft.actions.length}
+                </span>
+                <span className="chip">
+                  <CircleHelp className="size-3" /> {draft.questions.length}
+                </span>
+              </span>
+            )}
           </div>
 
           {genErr && (
-            <div className="card border-t-red-fg/30 bg-t-red-bg/40 px-3 py-2 text-[13px] text-t-red-fg flex items-center justify-between mb-3">
+            <div className="card border-t-red-fg/30 bg-t-red-bg/50 px-3 py-2 text-[13px] text-t-red-fg flex items-center justify-between mb-3">
               <span>{genErr}</span>
               <button className="btn btn-sm" onClick={generate}>
                 Retry
@@ -158,171 +197,222 @@ export function MeetingEditor({ meeting, carried, supersedable, projectId, crumb
           ) : draft ? (
             <DraftForm draft={draft} onChange={setDraft} carried={carried} supersedable={supersedable} />
           ) : (
-            <div className="card px-6 py-12 text-center">
-              <p className="text-ink-2">No draft yet.</p>
-              <p className="text-xs text-ink-3 mt-1 max-w-xs mx-auto">Generate one from your notes. Nothing is added to the project until you review it and publish.</p>
+            <div className="card px-6 py-8">
+              <p className="font-medium">Three steps, nothing automatic.</p>
+              <ol className="mt-3 flex flex-col gap-3 text-[13px] text-ink-2">
+                <Step n={1} title="Add rough notes" body="Paste, type, or dictate. A transcript from Fireflies is fine as-is." />
+                <Step n={2} title="Generate a draft" body="Summary, decisions, actions and open questions, each with the line in your notes it came from." />
+                <Step n={3} title="Review and publish" body="Edit or remove anything. Only published items become records in the project." />
+              </ol>
             </div>
           )}
         </section>
       </div>
-    </div>
+    </>
+  );
+}
+
+function Step({ n, title, body }: { n: number; title: string; body: string }) {
+  return (
+    <li className="flex gap-3">
+      <span className="size-5 rounded-full bg-paper-3 text-ink-2 text-[11px] font-semibold grid place-items-center shrink-0 mt-px">{n}</span>
+      <span>
+        <span className="font-medium text-ink">{title}</span>
+        <span className="block text-ink-2 leading-relaxed">{body}</span>
+      </span>
+    </li>
   );
 }
 
 // ---------------- draft form ----------------
 
+type ListKey = "decisions" | "actions" | "questions";
+
 function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; onChange: (d: Draft) => void; carried: Item[]; supersedable: Item[] }) {
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => onChange({ ...draft, [k]: v });
-  const upd = <K extends "decisions" | "actions" | "questions" | "carried_updates">(k: K, i: number, patch: Partial<Draft[K][number]>) =>
+  const upd = <K extends ListKey | "carried_updates">(k: K, i: number, patch: Partial<Draft[K][number]>) =>
     set(k, draft[k].map((x, j) => (j === i ? { ...x, ...patch } : x)) as Draft[K]);
-  const del = (k: "decisions" | "actions" | "questions", i: number) => set(k, draft[k].filter((_, j) => j !== i) as never);
+  const del = (k: ListKey, i: number) => set(k, draft[k].filter((_, j) => j !== i) as never);
   const carriedById = new Map(carried.map((c) => [c.id, c]));
 
   return (
-    <div className="flex flex-col gap-5">
-      <Block title="Summary">
-        <textarea value={draft.summary} onChange={(e) => set("summary", e.target.value)} className="quiet w-full leading-relaxed resize-none" />
-      </Block>
+    <div className="flex flex-col gap-4 fade-in">
+      <Section icon={FileText} title="Summary">
+        <div className="px-3 py-2.5">
+          <textarea value={draft.summary} onChange={(e) => set("summary", e.target.value)} className="quiet w-full leading-relaxed resize-none text-[13.5px]" />
+        </div>
+      </Section>
 
-      <Block title="Discussion points">
+      <Section icon={FileText} title="Discussion" count={draft.discussion_points.length} onAdd={() => set("discussion_points", [...draft.discussion_points, ""])}>
         {draft.discussion_points.map((p, i) => (
-          <div key={i} className="flex gap-2 items-start">
-            <span className="text-ink-3 mt-1">•</span>
-            <textarea value={p} onChange={(e) => set("discussion_points", draft.discussion_points.map((x, j) => (j === i ? e.target.value : x)))} className="quiet flex-1 leading-relaxed resize-none" rows={1} />
+          <div key={i} className="flex gap-2 items-start px-3 py-1.5 group">
+            <span className="text-ink-3 mt-[3px] text-xs">●</span>
+            <textarea value={p} onChange={(e) => set("discussion_points", draft.discussion_points.map((x, j) => (j === i ? e.target.value : x)))} className="quiet flex-1 leading-relaxed resize-none text-[13px]" rows={1} placeholder="Discussion point" />
             <Remove onClick={() => set("discussion_points", draft.discussion_points.filter((_, j) => j !== i))} />
           </div>
         ))}
-      </Block>
+      </Section>
 
-      <Block title={`Decisions · ${draft.decisions.length}`} hint="Confirmed = the notes show agreement. Otherwise keep as proposed.">
+      <Section icon={Gavel} title="Decisions" count={draft.decisions.length} hint="Confirmed only if the notes show agreement." onAdd={() => set("decisions", [...draft.decisions, { title: "", detail: null, status: "proposed", evidence: null }])}>
         {draft.decisions.map((d, i) => (
-          <Card key={i} onRemove={() => del("decisions", i)}>
+          <Row key={i} onRemove={() => del("decisions", i)}>
             <div className="flex items-start gap-2">
-              <button className="shrink-0 mt-0.5" onClick={() => upd("decisions", i, { status: d.status === "confirmed" ? "proposed" : "confirmed" })} title="Toggle proposed / confirmed">
-                <Pill value={d.status} />
+              <button
+                type="button"
+                className="shrink-0 mt-0.5 hover:bg-paper-3 rounded px-1 -mx-1"
+                onClick={() => upd("decisions", i, { status: d.status === "confirmed" ? "proposed" : "confirmed" })}
+                title="Toggle proposed / confirmed"
+              >
+                <Status value={d.status} pill />
               </button>
-              <textarea value={d.title} onChange={(e) => upd("decisions", i, { title: e.target.value })} className="quiet flex-1 font-medium resize-none" rows={1} />
+              <textarea value={d.title} onChange={(e) => upd("decisions", i, { title: e.target.value })} className="quiet flex-1 font-medium resize-none text-[13.5px]" rows={1} placeholder="What was decided" />
             </div>
-            <input value={d.detail ?? ""} onChange={(e) => upd("decisions", i, { detail: e.target.value || null })} placeholder="Detail (optional)" className="quiet w-full text-ink-2 mt-1" />
-            {d.evidence && <p className="evidence mt-1.5">“{d.evidence}”</p>}
-            {supersedable.length > 0 && (
-              <label className="mt-2 flex items-center gap-2 text-xs text-ink-2">
-                <span>Supersedes</span>
-                <select value={d.supersedes_id ?? ""} onChange={(e) => upd("decisions", i, { supersedes_id: e.target.value || null })} className="quiet text-xs max-w-[260px] truncate">
-                  <option value="">— nothing —</option>
-                  {supersedable.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.title} ({fmtDate(s.meeting_held_on)})
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </Card>
+            <div className="mt-1 flex items-center gap-3 pl-0.5">
+              <input value={d.detail ?? ""} onChange={(e) => upd("decisions", i, { detail: e.target.value || null })} placeholder="Add detail" className="quiet h-7 flex-1 text-[13px] text-ink-2" />
+              {supersedable.length > 0 && (
+                <label className="inline-flex items-center gap-1.5 text-xs text-ink-2 shrink-0">
+                  Replaces
+                  <select value={d.supersedes_id ?? ""} onChange={(e) => upd("decisions", i, { supersedes_id: e.target.value || null })} className="quiet h-7 text-xs max-w-56 truncate">
+                    <option value="">nothing</option>
+                    {supersedable.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.title} ({fmtDate(s.meeting_held_on)})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </div>
+            <Evidence text={d.evidence} />
+          </Row>
         ))}
-        {!draft.decisions.length && <p className="text-xs text-ink-3">None extracted.</p>}
-      </Block>
+        {!draft.decisions.length && <p className="px-3 py-2.5 text-xs text-ink-3">None found in the notes.</p>}
+      </Section>
 
-      <Block title={`Action items · ${draft.actions.length}`} hint="Missing owners and dates stay blank. Fill them only if you know.">
+      <Section icon={ListChecks} title="Action items" count={draft.actions.length} hint="Blank owner or date means the notes did not say." onAdd={() => set("actions", [...draft.actions, { title: "", detail: null, owner: null, due_on: null, blocker: null, evidence: null }])}>
         {draft.actions.map((a, i) => (
-          <Card key={i} onRemove={() => del("actions", i)}>
-            <textarea value={a.title} onChange={(e) => upd("actions", i, { title: e.target.value })} className="quiet w-full font-medium resize-none" rows={1} />
-            <div className="mt-1 flex items-center gap-3 text-[13px]">
-              <input value={a.owner ?? ""} onChange={(e) => upd("actions", i, { owner: e.target.value || null })} placeholder="Unassigned" className={`quiet w-36 ${a.owner ? "" : "italic text-ink-3"}`} />
+          <Row key={i} onRemove={() => del("actions", i)}>
+            <textarea value={a.title} onChange={(e) => upd("actions", i, { title: e.target.value })} className="quiet w-full font-medium resize-none text-[13.5px]" rows={1} placeholder="What needs to happen" />
+            <div className="mt-1 grid grid-cols-[170px_120px_minmax(0,1fr)] items-center gap-3">
+              <OwnerField value={a.owner} onChange={(v) => upd("actions", i, { owner: v })} />
               <DateCell value={a.due_on} onChange={(v) => upd("actions", i, { due_on: v })} />
+              <input value={a.blocker ?? ""} onChange={(e) => upd("actions", i, { blocker: e.target.value || null })} placeholder="Blocked by (optional)" className={`quiet h-7 text-[13px] ${a.blocker ? "text-t-red-fg" : ""}`} />
             </div>
-            <input value={a.blocker ?? ""} onChange={(e) => upd("actions", i, { blocker: e.target.value || null })} placeholder="Blocked by / depends on (optional)" className={`quiet w-full mt-1 text-[13px] ${a.blocker ? "text-t-red-fg" : ""}`} />
-            {a.evidence && <p className="evidence mt-1.5">“{a.evidence}”</p>}
-          </Card>
+            <Evidence text={a.evidence} />
+          </Row>
         ))}
-        {!draft.actions.length && <p className="text-xs text-ink-3">None extracted.</p>}
-      </Block>
+        {!draft.actions.length && <p className="px-3 py-2.5 text-xs text-ink-3">None found in the notes.</p>}
+      </Section>
 
-      <Block title={`Open questions · ${draft.questions.length}`}>
+      <Section icon={CircleHelp} title="Open questions" count={draft.questions.length} onAdd={() => set("questions", [...draft.questions, { title: "", owner: null, evidence: null }])}>
         {draft.questions.map((qn, i) => (
-          <Card key={i} onRemove={() => del("questions", i)}>
-            <textarea value={qn.title} onChange={(e) => upd("questions", i, { title: e.target.value })} className="quiet w-full font-medium resize-none" rows={1} />
-            <input value={qn.owner ?? ""} onChange={(e) => upd("questions", i, { owner: e.target.value || null })} placeholder="Who should answer (optional)" className={`quiet w-56 mt-1 text-[13px] ${qn.owner ? "" : "italic text-ink-3"}`} />
-            {qn.evidence && <p className="evidence mt-1.5">“{qn.evidence}”</p>}
-          </Card>
+          <Row key={i} onRemove={() => del("questions", i)}>
+            <textarea value={qn.title} onChange={(e) => upd("questions", i, { title: e.target.value })} className="quiet w-full font-medium resize-none text-[13.5px]" rows={1} placeholder="What is still unanswered" />
+            <div className="mt-1">
+              <OwnerField value={qn.owner} onChange={(v) => upd("questions", i, { owner: v })} placeholder="Who should answer" />
+            </div>
+            <Evidence text={qn.evidence} />
+          </Row>
         ))}
-        {!draft.questions.length && <p className="text-xs text-ink-3">None extracted.</p>}
-      </Block>
+        {!draft.questions.length && <p className="px-3 py-2.5 text-xs text-ink-3">None found in the notes.</p>}
+      </Section>
 
       {draft.carried_updates.length > 0 && (
-        <Block title={`Updates to carried-forward work · ${draft.carried_updates.length}`} hint="The notes mention existing items. Tick to apply the status change on publish. Unticked = no change.">
+        <Section icon={RotateCw} title="Carried-forward work mentioned in these notes" count={draft.carried_updates.length} hint="Tick to apply on publish. Unticked means no change.">
           {draft.carried_updates.map((u, i) => {
             const c = carriedById.get(u.item_id);
             if (!c) return null;
             return (
-              <label key={u.item_id} className="card px-3 py-2 flex items-start gap-2.5 cursor-pointer">
-                <input type="checkbox" checked={!!u.accepted} onChange={(e) => upd("carried_updates", i, { accepted: e.target.checked })} className="mt-1 accent-accent" />
-                <span className="flex-1 text-[13px]">
+              <label key={u.item_id} className="px-3 py-2.5 flex items-start gap-2.5 cursor-pointer row-hover">
+                <input type="checkbox" checked={!!u.accepted} onChange={(e) => upd("carried_updates", i, { accepted: e.target.checked })} className="mt-1 accent-accent size-3.5" />
+                <span className="flex-1 min-w-0 text-[13px]">
                   <span className="font-medium">{c.title}</span>
-                  <span className="text-ink-2">
-                    {" "}
-                    · <Pill value={c.status} /> → <Pill value={u.suggested_status} />
+                  <span className="mt-1 flex items-center gap-1.5 text-xs text-ink-2">
+                    <Status value={c.status} /> <span className="text-ink-3">→</span> <Status value={u.suggested_status} />
                   </span>
-                  {u.evidence && <span className="evidence block mt-1">“{u.evidence}”</span>}
+                  <Evidence text={u.evidence} />
                 </span>
               </label>
             );
           })}
-        </Block>
+        </Section>
       )}
 
-      <Block title="Follow-up context">
-        <textarea value={draft.follow_up_context} onChange={(e) => set("follow_up_context", e.target.value)} className="quiet w-full leading-relaxed resize-none" />
-      </Block>
+      <Section icon={CalendarDays} title="For the next meeting">
+        <div className="px-3 py-2.5">
+          <textarea value={draft.follow_up_context} onChange={(e) => set("follow_up_context", e.target.value)} className="quiet w-full leading-relaxed resize-none text-[13px]" placeholder="What the next meeting needs to pick up" />
+        </div>
+      </Section>
     </div>
   );
 }
 
-function Block({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
+function OwnerField({ value, onChange, placeholder = "Unassigned" }: { value: string | null; onChange: (v: string | null) => void; placeholder?: string }) {
   return (
-    <div>
-      <h3 className="label mb-1.5">{title}</h3>
-      {hint && <p className="text-xs text-ink-3 -mt-1 mb-2">{hint}</p>}
-      <div className="flex flex-col gap-2">{children}</div>
+    <span className="inline-flex items-center gap-1.5 min-w-0">
+      {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-line-2 shrink-0" />}
+      <input list="people" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} placeholder={placeholder} className={`quiet h-7 w-full text-[13px] ${value ? "" : "italic text-ink-3"}`} />
+    </span>
+  );
+}
+
+function Section({ icon: Icon, title, count, hint, onAdd, children }: { icon: typeof FileText; title: string; count?: number; hint?: string; onAdd?: () => void; children: React.ReactNode }) {
+  return (
+    <div className="card overflow-hidden">
+      <div className="h-9 px-3 flex items-center gap-2 border-b border-line bg-paper-2/60">
+        <Icon className="size-3.5 text-ink-3" />
+        <span className="text-[13px] font-medium">{title}</span>
+        {count !== undefined && <span className="text-xs text-ink-3 tabular-nums">{count}</span>}
+        {hint && <span className="ml-2 text-xs text-ink-3 truncate">{hint}</span>}
+        {onAdd && (
+          <button type="button" onClick={onAdd} className="ml-auto btn btn-ghost btn-sm">
+            <Plus className="size-3" /> Add
+          </button>
+        )}
+      </div>
+      <div className="divide-y divide-line">{children}</div>
     </div>
   );
 }
 
-function Card({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
+function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
   return (
-    <div className="card px-3 py-2.5 relative group">
+    <div className="px-3 py-2.5 relative group row-hover">
       {children}
-      <Remove onClick={onRemove} className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100" />
+      <Remove onClick={onRemove} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100" />
     </div>
   );
 }
 
 function Remove({ onClick, className = "" }: { onClick: () => void; className?: string }) {
   return (
-    <button onClick={onClick} title="Remove" className={`size-6 grid place-items-center rounded text-ink-3 hover:text-t-red-fg hover:bg-t-red-bg ${className}`}>
-      <svg viewBox="0 0 12 12" className="size-3" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M2 2l8 8M10 2l-8 8" />
-      </svg>
+    <button type="button" onClick={onClick} title="Remove" className={`size-6 grid place-items-center rounded text-ink-3 hover:text-t-red-fg hover:bg-t-red-bg ${className}`}>
+      <X className="size-3" />
     </button>
   );
 }
 
+function Evidence({ text }: { text: string | null }) {
+  if (!text) return null;
+  return <p className="evidence mt-1.5">“{text}”</p>;
+}
+
 function DraftSkeleton() {
   return (
-    <div className="flex flex-col gap-5" aria-busy>
-      <p className="text-xs text-ink-3 flex items-center gap-2">
-        <Spinner /> Reading notes and extracting decisions, actions and questions…
+    <div className="flex flex-col gap-4" aria-busy>
+      <p className="text-xs text-ink-2 flex items-center gap-2">
+        <Spinner /> Reading the notes and pulling out decisions, actions and questions…
       </p>
-      {[3, 4, 3, 2].map((n, i) => (
-        <div key={i} className="flex flex-col gap-2">
-          <div className="skeleton h-3 w-24" />
-          {Array.from({ length: n }).map((_, j) => (
-            <div key={j} className="skeleton h-14" />
-          ))}
+      {[2, 3, 4, 2].map((n, i) => (
+        <div key={i} className="card overflow-hidden">
+          <div className="h-9 border-b border-line bg-paper-2/60" />
+          <div className="p-3 flex flex-col gap-2">
+            {Array.from({ length: n }).map((_, j) => (
+              <div key={j} className="skeleton h-12" />
+            ))}
+          </div>
         </div>
       ))}
     </div>
   );
 }
-
-export { LABEL };

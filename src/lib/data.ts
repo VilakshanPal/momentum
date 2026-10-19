@@ -3,6 +3,20 @@ import type { Item, Meeting, Project } from "./schema";
 
 export const listProjects = () => q<Project>(`select * from projects order by created_at`);
 
+export type ProjectStats = { meetings: number; open_actions: number; open_questions: number; decisions: number; actions: number; questions: number };
+
+export const projectStats = async (projectId: string): Promise<ProjectStats> =>
+  (await one<ProjectStats>(
+    `select
+       (select count(*)::int from meetings where project_id = $1) as meetings,
+       (select count(*)::int from items where project_id = $1 and kind = 'action' and status <> 'done') as open_actions,
+       (select count(*)::int from items where project_id = $1 and kind = 'question' and status = 'open') as open_questions,
+       (select count(*)::int from items where project_id = $1 and kind = 'decision') as decisions,
+       (select count(*)::int from items where project_id = $1 and kind = 'action') as actions,
+       (select count(*)::int from items where project_id = $1 and kind = 'question') as questions`,
+    [projectId],
+  ))!;
+
 export const getProject = (id: string) => one<Project>(`select * from projects where id = $1`, [id]);
 
 export const listMeetings = (projectId: string) =>
@@ -56,3 +70,22 @@ export const supersedableDecisions = (projectId: string) =>
     `${ITEM_SELECT} where i.project_id = $1 and i.kind = 'decision' and i.status = 'confirmed' order by m.held_on desc, i.position`,
     [projectId],
   );
+
+// Distinct people seen in this project, for owner suggestions. "Priya Nair (HAIRO)" and "Priya" collapse to one entry.
+export const projectPeople = async (projectId: string) => {
+  const rows = await q<{ name: string }>(
+      `select distinct name from (
+         select jsonb_array_elements_text(participants) as name from meetings where project_id = $1
+         union select owner from items where project_id = $1 and owner is not null
+       ) p where name <> '' order by name`,
+      [projectId],
+    );
+  const byFirst = new Map<string, string>();
+  for (const { name } of rows) {
+    const clean = name.replace(/\s*\(.*?\)\s*/g, "").trim();
+    const key = clean.split(/\s+/)[0].toLowerCase();
+    const cur = byFirst.get(key);
+    if (!cur || clean.length > cur.length) byFirst.set(key, clean);
+  }
+  return [...byFirst.values()].sort();
+};
