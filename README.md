@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# MOMentum
 
-## Getting Started
+Turn meetings into work that actually gets done. Rough notes in, reviewed Minutes of Meeting out, with decisions, actions and open questions that carry across meetings instead of dying in separate documents.
 
-First, run the development server:
+Built solo for **No Hands: The Wispr Challenge** (Builders track), dictated with Wispr Flow into Claude Code.
+
+## Run locally
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run db          # starts an embedded Postgres on :5433 (first run downloads it)
+npm run db:migrate  # applies db/migrations/*.sql
+npm run db:seed     # loads the synthetic HAIRO project with two meetings
+npm run dev         # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Copy `.env.example` to `.env`. Without `ANTHROPIC_API_KEY`, set `LLM_MOCK=1` to exercise the UI with a deterministic fake draft.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Deploy (Vercel + Supabase)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Create a Supabase project. Run `db/migrations/0001_init.sql` in the SQL editor (or set `DATABASE_URL` and run `npm run db:migrate`).
+2. Seed it: `DATABASE_URL=<supabase session pooler url> npm run db:seed`.
+3. On Vercel set `DATABASE_URL`, `ANTHROPIC_API_KEY`, and `CRON_SECRET` (any long random string). The daily cron in `vercel.json` re-seeds the demo.
 
-## Learn More
+No sign-in. Everything is server actions against Postgres; no credentials reach the browser.
 
-To learn more about Next.js, take a look at the following resources:
+## Docs
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `docs/plot.md` — where the build is and what is next.
+- `docs/decisions.md` — every consequential decision and why.
+- `product (1).md` — the product spec.
