@@ -34,9 +34,11 @@ function useItem(initial: Item) {
 
 function Origin({ item, projectId }: { item: Item; projectId: string }) {
   return (
-    <Link href={`/p/${projectId}/m/${item.meeting_id}`} className="inline-flex items-center gap-1 text-xs text-ink-3 hover:text-ink whitespace-nowrap" title="Originating meeting">
-      <CalendarDays className="size-3" />
-      {item.meeting_title} · {fmtDate(item.meeting_held_on)}
+    <Link href={`/p/${projectId}/m/${item.meeting_id}`} className="flex items-center gap-1 max-w-full min-w-0 text-xs text-ink-3 hover:text-ink" title={`From: ${item.meeting_title || "Untitled meeting"}, ${fmtDate(item.meeting_held_on)}`}>
+      <CalendarDays className="size-3 shrink-0" />
+      <span className="truncate">
+        {item.meeting_title || "Untitled meeting"} · {fmtDate(item.meeting_held_on)}
+      </span>
     </Link>
   );
 }
@@ -47,8 +49,9 @@ function OwnerInput({ value, onChange, className = "" }: { value: string | null;
       {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-hairline-2 shrink-0" />}
       <input
         list="people"
-        className={`quiet h-7 w-full text-[13px] ${value ? "" : "italic text-ink-4"}`}
+        className={`quiet h-7 w-full truncate text-[13px] ${value ? "" : "italic text-ink-4"}`}
         placeholder="Unassigned"
+        title={value ?? undefined}
         defaultValue={value ?? ""}
         onBlur={(e) => (e.target.value.trim() || null) !== value && onChange(e.target.value.trim() || null)}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
@@ -67,11 +70,14 @@ export function OpenItem({ item: initial, projectId }: { item: Item; projectId: 
           <StatusMenu kind={item.kind} value={item.status} onChange={(s) => patch({ status: s })} />
         </span>
       </div>
-      <p className="text-[13px] leading-snug -mt-1 pl-0.5">{item.title}</p>
-      <div className="flex items-center gap-3 text-xs text-ink-3 pl-0.5">
-        <Person name={item.owner} muted />
+      <p className="text-[13px] leading-snug -mt-1 pl-0.5 break-words">{item.title}</p>
+      {item.detail && <p className="text-xs text-ink-3 leading-snug -mt-0.5 pl-0.5 break-words">{item.detail}</p>}
+      <div className="flex items-center gap-3 text-xs text-ink-3 pl-0.5 min-w-0">
+        <span className="min-w-0 max-w-[50%] shrink-0 flex">
+          <Person name={item.owner} muted />
+        </span>
         {item.kind === "action" && <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} />}
-        <span className="ml-auto">
+        <span className="ml-auto min-w-0 flex justify-end">
           <Origin item={item} projectId={projectId} />
         </span>
       </div>
@@ -90,23 +96,37 @@ export function ActionRow({ item: initial, projectId }: { item: Item; projectId:
   const { item, patch, err, pending } = useItem(initial);
   return (
     <div className={`row grid ${ACTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
-      <input
-        className={`quiet h-7 font-medium truncate ${item.status === "done" ? "text-ink-3 line-through" : ""}`}
-        defaultValue={item.title}
-        onBlur={(e) => e.target.value.trim() && e.target.value !== item.title && patch({ title: e.target.value.trim() })}
-        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-      />
+      <span className="flex flex-col min-w-0 py-1">
+        <input
+          className={`quiet h-7 font-medium truncate ${item.status === "done" ? "text-ink-3 line-through" : ""}`}
+          defaultValue={item.title}
+          title={item.title}
+          onBlur={(e) => e.target.value.trim() && e.target.value !== item.title && patch({ title: e.target.value.trim() })}
+          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+        />
+        {item.detail && (
+          <input
+            className="quiet h-6 text-xs text-ink-3 truncate"
+            defaultValue={item.detail}
+            title={item.detail}
+            aria-label="Detail"
+            onBlur={(e) => (e.target.value.trim() || null) !== item.detail && patch({ detail: e.target.value.trim() || null })}
+            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+          />
+        )}
+      </span>
       <StatusMenu kind="action" value={item.status} onChange={(s) => patch({ status: s })} />
       <OwnerInput value={item.owner} onChange={(v) => patch({ owner: v })} />
       <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} />
       <input
-        className={`quiet h-7 truncate text-[13px] ${item.blocker ? "text-red" : "text-ink-3"}`}
+        className={`quiet h-7 w-full truncate text-[13px] ${item.blocker ? "text-red" : "text-ink-3"}`}
         placeholder="Nothing"
+        title={item.blocker ?? undefined}
         defaultValue={item.blocker ?? ""}
         onBlur={(e) => (e.target.value.trim() || null) !== item.blocker && patch({ blocker: e.target.value.trim() || null })}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       />
-      <span className="truncate text-right">
+      <span className="min-w-0 flex justify-end">
         <Origin item={item} projectId={projectId} />
       </span>
       {err && <p className="col-span-full text-xs text-red pb-1">{err}</p>}
@@ -126,7 +146,7 @@ export function QuestionRow({ item: initial, projectId }: { item: Item; projectI
       />
       <StatusMenu kind="question" value={item.status} onChange={(s) => patch({ status: s })} />
       <OwnerInput value={item.owner} onChange={(v) => patch({ owner: v })} />
-      <span className="truncate text-right">
+      <span className="min-w-0 flex justify-end">
         <Origin item={item} projectId={projectId} />
       </span>
       {err && <p className="col-span-full text-xs text-red pb-1">{err}</p>}

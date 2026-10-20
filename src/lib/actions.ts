@@ -147,7 +147,7 @@ export async function publishMeeting(meetingId: string, draft: Draft): Promise<R
     let i = 0;
     for (const dec of d.decisions) {
       const title = cleanText(dec.title, 300);
-      if (!title) continue;
+      if (!title || dec.skipped) continue;
       let supersedes_id: string | null = null;
       if (dec.supersedes_id) {
         const old = (
@@ -166,14 +166,14 @@ export async function publishMeeting(meetingId: string, draft: Draft): Promise<R
     i = 0;
     for (const a of d.actions) {
       const title = cleanText(a.title, 300);
-      if (!title) continue;
+      if (!title || a.skipped) continue;
       const blocker = cleanText(a.blocker);
       await ins("action", { title, detail: cleanText(a.detail), owner: cleanText(a.owner, 80), due_on: cleanDate(a.due_on), status: blocker ? "blocked" : "todo", blocker, evidence: cleanText(a.evidence) }, i++);
     }
     i = 0;
     for (const qn of d.questions) {
       const title = cleanText(qn.title, 300);
-      if (!title) continue;
+      if (!title || qn.skipped) continue;
       await ins("question", { title, owner: cleanText(qn.owner, 80), status: "open", evidence: cleanText(qn.evidence) }, i++);
     }
     // Carried-forward status changes: only those the user accepted, only valid statuses for the item's kind.

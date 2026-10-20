@@ -9,6 +9,9 @@ const pg = new EmbeddedPostgres({
   password: "momentum",
   port: 5433,
   persistent: true,
+  // Windows initdb defaults to the system codepage (WIN1252), which rejects names like "Nguyễn" or "李".
+  // Supabase is UTF8; match it locally. Applies on first init only: delete .pgdata to re-init.
+  initdbFlags: ["--encoding=UTF8", "--locale=C"],
 });
 
 async function main() {

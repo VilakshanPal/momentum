@@ -45,8 +45,12 @@ export const MomSchema = z.object({
 });
 
 // What is stored on meetings.mom after the user edits: adds review-only fields the LLM never sets.
+// `skipped` = the reviewer rejected this suggestion. It stays in the draft for traceability but never becomes a record.
+const reviewed = { skipped: z.boolean().optional() };
 export const DraftSchema = MomSchema.extend({
-  decisions: z.array(Decision.extend({ supersedes_id: z.string().nullable().optional() })),
+  decisions: z.array(Decision.extend({ supersedes_id: z.string().nullable().optional(), ...reviewed })),
+  actions: z.array(Action.extend(reviewed)),
+  questions: z.array(Question.extend(reviewed)),
   carried_updates: z.array(CarriedUpdate.extend({ accepted: z.boolean().optional() })),
 });
 export type Draft = z.infer<typeof DraftSchema>;
@@ -88,6 +92,7 @@ export type Meeting = {
   status: "draft" | "published";
   published_at: string | null;
   created_at: string;
+  just_published?: boolean | null; // joined by getMeeting
 };
 
 export type Item = {

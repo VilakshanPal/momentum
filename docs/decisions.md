@@ -69,3 +69,22 @@ User has OpenAI API access only. `src/lib/llm.ts` now uses the OpenAI Responses 
 
 ## 2026-10-20: Screenshots via Playwright on the installed Chrome
 The Claude browser extension stopped reaching localhost mid-session. `scripts/shots.mjs` and `scripts/walk.mjs` drive the installed Chrome through Playwright (`channel: "chrome"`, no browser download) and write to `.shots/` (gitignored). Used for every design review pass.
+
+## 2026-10-20: Approval is a checkbox, not a delete
+Every AI suggestion on the review screen (decision, action, question) has a checkbox. Ticked = will be published; unticked = stays visible, dimmed, stored in the draft as `skipped: true`, never becomes a record. The Publish button counts what is ticked ("Publish 7 items"). The hover X still deletes outright.
+Why: the spec's P0.4 asks for confirm, reject or remove. A hover-only X is not a visible reject, and a rejected suggestion should stay in the draft so the reviewer can change their mind and so the record shows what the model proposed.
+
+## 2026-10-20: After publish, say what happened and what is next
+A published meeting opened within three minutes of publishing shows one line: how many actions and questions went to the board, decisions to the log, carried items updated, and "Next: draft the follow-up". The flag comes from SQL (`published_at > now() - interval '3 minutes'`), not `Date.now()` in render, which React's purity lint rejects.
+
+## 2026-10-20: Action detail is shown and editable after publish
+`detail` on actions was captured but never rendered once published. It now shows under the title in the open-work rail and the published view, and is editable inline on the board (spec 2.3 "edit title/description"). In the draft it is editable whenever the model returned one.
+
+## 2026-10-20: Local Postgres must be UTF8
+Windows initdb defaults to the system codepage (WIN1252), which rejects "Nguyễn" and "李". `scripts/db.ts` now passes `--encoding=UTF8 --locale=C`; Supabase is UTF8 already. Existing `.pgdata` had to be deleted and re-initialised. Found by the worst-case seed.
+
+## 2026-10-20: Worst-case fixture lives in the database, not in props
+`scripts/seed-worst.ts` adds a second project with the longest values the schema accepts (300-char titles, 80-char owners, emails as owners, 500-char blockers, 30 participants, emoji and CJK names, one-letter names, 1,200 actions, an empty meeting, a one-of-everything meeting). It enters through the same boundary as real data. A demo reset removes it. Found and fixed: broken emoji initials, clipped origin links, wrapped date cells hiding the owner, overflowing "Replaces" chips, decision-log dates wrapping to three lines, blank rows for untitled meetings, a full-width supersede select. The board scrolls sideways under 960px rather than crushing the title column.
+
+## 2026-10-20: Ctrl+Enter generates
+Keyboard path from notes to draft, shown next to the notes. Nothing animates on it (keyboard actions get no motion).

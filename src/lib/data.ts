@@ -29,7 +29,8 @@ export const listMeetings = (projectId: string) =>
     [projectId],
   );
 
-export const getMeeting = (id: string) => one<Meeting>(`select * from meetings where id = $1`, [id]);
+// just_published drives the "what happens next" banner right after a publish. Clock lives in the DB, not the render.
+export const getMeeting = (id: string) => one<Meeting>(`select *, (published_at > now() - interval '3 minutes') as just_published from meetings where id = $1`, [id]);
 
 const ITEM_SELECT = `select i.*, m.title as meeting_title, m.held_on as meeting_held_on
   from items i join meetings m on m.id = i.meeting_id`;

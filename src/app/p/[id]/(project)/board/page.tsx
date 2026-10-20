@@ -21,13 +21,14 @@ export default async function Board({ params }: { params: Promise<{ id: string }
     <>
       <TopBar crumbs={[{ label: project.name, href: `/p/${id}`, icon: Briefcase }, { label: "Board", icon: ListChecks }]} />
       <PeopleList people={people} />
-      <div className="px-8 py-7 flex flex-col gap-8">
-        <section>
-          <div className="flex items-baseline justify-between mb-3">
+      <div className="px-8 py-7 flex flex-col gap-8 min-w-0">
+        <section className="min-w-0">
+          <div className="flex items-baseline justify-between gap-4 mb-3">
             <h1 className="h-section">Actions</h1>
-            <p className="text-xs text-ink-3">Click any cell to edit. Grouped by status; only you change status, never the AI.</p>
+            <p className="text-xs text-ink-3 truncate">Click any cell to edit. Grouped by status; only you change status, never the AI.</p>
           </div>
-          <div className="card overflow-hidden">
+          {/* Fixed-width columns need about 960px; below that the table scrolls sideways instead of crushing the title column. */}
+          <div className="card overflow-x-auto [&>*]:min-w-[960px]">
             <div className={`grid ${ACTION_COLS} gap-3 px-3 h-9 items-center border-b border-hairline bg-surface-2`}>
               {["Action", "Status", "Owner", "Due", "Blocked by", "From meeting"].map((h, i) => (
                 <span key={h} className={`eyebrow ${i === 5 ? "text-right" : ""}`}>
@@ -43,9 +44,9 @@ export default async function Board({ params }: { params: Promise<{ id: string }
           </div>
         </section>
 
-        <section>
+        <section className="min-w-0">
           <h1 className="h-section mb-3">Questions</h1>
-          <div className="card overflow-hidden">
+          <div className="card overflow-x-auto [&>*]:min-w-[720px]">
             <div className={`grid ${QUESTION_COLS} gap-3 px-3 h-9 items-center border-b border-hairline bg-surface-2`}>
               {["Question", "Status", "Owner", "From meeting"].map((h, i) => (
                 <span key={h} className={`eyebrow ${i === 3 ? "text-right" : ""}`}>

@@ -8,7 +8,14 @@ import { MAX_NOTES_CHARS, type Draft, type Item, type Meeting } from "@/lib/sche
 import { OpenItem, PeopleList } from "./ItemRow";
 import { TopBar } from "./TopBar";
 import { DateCell } from "./DateCell";
-import { Avatar, Spinner, Status, fmtDate } from "./ui";
+import { StatusMenu } from "./StatusMenu";
+import { Avatar, Kbd, Spinner, Status, fmtDate } from "./ui";
+
+// What publish will create: every suggestion the reviewer kept, plus accepted carried-forward changes.
+export function publishCount(d: Draft) {
+  const kept = (xs: { title: string; skipped?: boolean }[]) => xs.filter((x) => !x.skipped && x.title.trim()).length;
+  return { items: kept(d.decisions) + kept(d.actions) + kept(d.questions), updates: d.carried_updates.filter((u) => u.accepted).length };
+}
 
 type Props = {
   meeting: Meeting;
@@ -87,18 +94,25 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
 
   const over = notes.length > MAX_NOTES_CHARS;
   const tooShort = notes.trim().length < 20;
+  const canGenerate = !generating && !over && !tooShort;
+  const count = draft ? publishCount(draft) : null;
 
   return (
     <>
       <TopBar crumbs={[{ label: projectName, href: `/p/${projectId}`, icon: Briefcase }, { label: title || "Untitled meeting", icon: PenLine }]}>
         <span className={`text-xs mr-1 ${save === "error" ? "text-red" : "text-ink-3"}`}>{{ saved: "Saved", saving: "Saving…", dirty: "Unsaved changes", error: "Save failed" }[save]}</span>
-        <button className="btn" onClick={generate} disabled={generating || over || tooShort} title={tooShort ? "Add some notes first" : undefined}>
+        <button className="btn" onClick={generate} disabled={!canGenerate} title={tooShort ? "Add some notes first" : "Ctrl+Enter in the notes"}>
           {generating ? <Spinner /> : draft ? <RotateCw className="size-3.5" /> : <Sparkles className="size-3.5" />}
           {draft ? "Regenerate" : "Generate draft"}
         </button>
-        <button className="btn btn-primary" onClick={publish} disabled={!draft || publishing || generating} title={!draft ? "Generate and review a draft first" : "Create the records in this project"}>
+        <button
+          className="btn btn-primary"
+          onClick={publish}
+          disabled={!draft || publishing || generating}
+          title={!draft ? "Generate and review a draft first" : "Creates the kept items as records in this project. Skipped suggestions are left out."}
+        >
           {publishing && <Spinner />}
-          Publish
+          {count && count.items ? `Publish ${count.items} ${count.items === 1 ? "item" : "items"}` : "Publish"}
         </button>
       </TopBar>
       <PeopleList people={people} />
@@ -141,13 +155,23 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && canGenerate) {
+                  e.preventDefault();
+                  generate();
+                }
+              }}
               placeholder={"Type here, paste a Fireflies transcript, or hold the Wispr Flow key and talk.\n\nRough is fine. Owners and dates are only picked up when you actually said them."}
               className="w-full min-h-[440px] px-4 py-3 leading-relaxed text-[14px] outline-none resize-none bg-transparent placeholder:text-ink-3"
               spellCheck={false}
             />
           </div>
-          <p className="-mt-3 text-xs text-ink-3 inline-flex items-center gap-1.5">
-            <Mic className="size-3" /> Dictation and pasted transcripts both work. Nothing leaves this page until you publish.
+          <p className="-mt-3 text-xs text-ink-3 flex items-center gap-1.5">
+            <Mic className="size-3 shrink-0" /> Dictation and pasted transcripts both work. Nothing leaves this page until you publish.
+            <span className="ml-auto inline-flex items-center gap-1 whitespace-nowrap">
+              <Kbd>Ctrl</Kbd>
+              <Kbd>Enter</Kbd> to generate
+            </span>
           </p>
 
           <div>
@@ -165,9 +189,9 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
         {/* Draft */}
         <section className="px-8 py-6 bg-surface-2 min-w-0">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="size-4 text-primary" />
-            <h2 className="h-title">AI draft</h2>
-            <span className="text-xs text-ink-3">{draft ? "Review, edit, then publish. Remove anything wrong." : "Nothing generated yet."}</span>
+            <Sparkles className="size-4 text-primary shrink-0" />
+            <h2 className="h-title whitespace-nowrap">AI draft</h2>
+            <span className="text-xs text-ink-3 truncate min-w-0">{draft ? "Review, edit, then publish. Untick anything that is wrong." : "Nothing generated yet."}</span>
             {draft && (
               <span className="ml-auto flex items-center gap-1.5 text-xs text-ink-2 tabular-nums">
                 <span className="chip">
@@ -233,6 +257,8 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
   const upd = <K extends ListKey | "carried_updates">(k: K, i: number, patch: Partial<Draft[K][number]>) =>
     set(k, draft[k].map((x, j) => (j === i ? { ...x, ...patch } : x)) as Draft[K]);
   const del = (k: ListKey, i: number) => set(k, draft[k].filter((_, j) => j !== i) as never);
+  const keep = (k: ListKey, i: number, v: boolean) => upd(k, i, { skipped: !v });
+  const kept = (k: ListKey) => draft[k].filter((x) => !x.skipped).length;
   const carriedById = new Map(carried.map((c) => [c.id, c]));
 
   return (
@@ -253,29 +279,24 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
         ))}
       </Section>
 
-      <Section icon={Gavel} title="Decisions" count={draft.decisions.length} hint="Confirmed only if the notes show agreement." onAdd={() => set("decisions", [...draft.decisions, { title: "", detail: null, status: "proposed", evidence: null }])}>
+      <Section icon={Gavel} title="Decisions" count={kept("decisions")} total={draft.decisions.length} hint="Confirmed only if the notes show agreement." onAdd={() => set("decisions", [...draft.decisions, { title: "", detail: null, status: "proposed", evidence: null }])}>
         {draft.decisions.map((d, i) => (
-          <Row key={i} onRemove={() => del("decisions", i)}>
+          <Row key={i} kept={!d.skipped} onKeep={(v) => keep("decisions", i, v)} onRemove={() => del("decisions", i)}>
             <div className="flex items-start gap-2">
-              <button
-                type="button"
-                className="shrink-0 mt-0.5 hover:bg-wash rounded px-1 -mx-1"
-                onClick={() => upd("decisions", i, { status: d.status === "confirmed" ? "proposed" : "confirmed" })}
-                title="Toggle proposed / confirmed"
-              >
-                <Status value={d.status} pill />
-              </button>
+              <span className="shrink-0 mt-px">
+                <StatusMenu kind="decision" value={d.status} pill onChange={(s) => upd("decisions", i, { status: s as "proposed" | "confirmed" })} />
+              </span>
               <textarea value={d.title} onChange={(e) => upd("decisions", i, { title: e.target.value })} className="quiet flex-1 font-medium resize-none text-[13.5px]" rows={1} placeholder="What was decided" />
             </div>
             <textarea value={d.detail ?? ""} onChange={(e) => upd("decisions", i, { detail: e.target.value || null })} placeholder="Add detail" className="quiet mt-1 w-full text-[13px] text-ink-2 resize-none leading-snug" rows={1} />
             {supersedable.length > 0 && (
-              <label className="mt-1 inline-flex items-center gap-1.5 text-xs text-ink-3">
-                Replaces an earlier decision
-                <select value={d.supersedes_id ?? ""} onChange={(e) => upd("decisions", i, { supersedes_id: e.target.value || null })} className="quiet h-7 text-xs max-w-72 truncate text-ink-2">
+              <label className="mt-1 flex items-center gap-1.5 text-xs text-ink-3 min-w-0">
+                <span className="shrink-0">Replaces an earlier decision</span>
+                <select value={d.supersedes_id ?? ""} onChange={(e) => upd("decisions", i, { supersedes_id: e.target.value || null })} className="quiet h-7 text-xs w-auto max-w-[260px] truncate text-ink-2">
                   <option value="">No</option>
                   {supersedable.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.title} ({fmtDate(s.meeting_held_on)})
+                      {s.title.length > 70 ? s.title.slice(0, 70) + "…" : s.title} ({fmtDate(s.meeting_held_on)})
                     </option>
                   ))}
                 </select>
@@ -287,14 +308,17 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
         {!draft.decisions.length && <p className="px-3 py-2.5 text-xs text-ink-3">None found in the notes.</p>}
       </Section>
 
-      <Section icon={ListChecks} title="Action items" count={draft.actions.length} hint="Blank owner or date means the notes did not say." onAdd={() => set("actions", [...draft.actions, { title: "", detail: null, owner: null, due_on: null, blocker: null, evidence: null }])}>
+      <Section icon={ListChecks} title="Action items" count={kept("actions")} total={draft.actions.length} hint="Blank owner or date means the notes did not say." onAdd={() => set("actions", [...draft.actions, { title: "", detail: null, owner: null, due_on: null, blocker: null, evidence: null }])}>
         {draft.actions.map((a, i) => (
-          <Row key={i} onRemove={() => del("actions", i)}>
+          <Row key={i} kept={!a.skipped} onKeep={(v) => keep("actions", i, v)} onRemove={() => del("actions", i)}>
             <textarea value={a.title} onChange={(e) => upd("actions", i, { title: e.target.value })} className="quiet w-full font-medium resize-none text-[13.5px]" rows={1} placeholder="What needs to happen" />
-            <div className="mt-1 grid grid-cols-[170px_120px_minmax(0,1fr)] items-center gap-3">
+            {a.detail !== null && (
+              <textarea value={a.detail} onChange={(e) => upd("actions", i, { detail: e.target.value || null })} placeholder="Detail" className="quiet mt-0.5 w-full text-[13px] text-ink-2 resize-none leading-snug" rows={1} />
+            )}
+            <div className="mt-1 grid grid-cols-[minmax(120px,170px)_120px_minmax(0,1fr)] items-center gap-3">
               <OwnerField value={a.owner} onChange={(v) => upd("actions", i, { owner: v })} />
               <DateCell value={a.due_on} onChange={(v) => upd("actions", i, { due_on: v })} />
-              <input value={a.blocker ?? ""} onChange={(e) => upd("actions", i, { blocker: e.target.value || null })} placeholder="Blocked by (optional)" className={`quiet h-7 text-[13px] ${a.blocker ? "text-red" : ""}`} />
+              <input value={a.blocker ?? ""} onChange={(e) => upd("actions", i, { blocker: e.target.value || null })} placeholder="Blocked by (optional)" title={a.blocker ?? undefined} className={`quiet h-7 w-full min-w-0 truncate text-[13px] ${a.blocker ? "text-red" : ""}`} />
             </div>
             <Evidence text={a.evidence} />
           </Row>
@@ -302,11 +326,11 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
         {!draft.actions.length && <p className="px-3 py-2.5 text-xs text-ink-3">None found in the notes.</p>}
       </Section>
 
-      <Section icon={CircleHelp} title="Open questions" count={draft.questions.length} onAdd={() => set("questions", [...draft.questions, { title: "", owner: null, evidence: null }])}>
+      <Section icon={CircleHelp} title="Open questions" count={kept("questions")} total={draft.questions.length} onAdd={() => set("questions", [...draft.questions, { title: "", owner: null, evidence: null }])}>
         {draft.questions.map((qn, i) => (
-          <Row key={i} onRemove={() => del("questions", i)}>
+          <Row key={i} kept={!qn.skipped} onKeep={(v) => keep("questions", i, v)} onRemove={() => del("questions", i)}>
             <textarea value={qn.title} onChange={(e) => upd("questions", i, { title: e.target.value })} className="quiet w-full font-medium resize-none text-[13.5px]" rows={1} placeholder="What is still unanswered" />
-            <div className="mt-1">
+            <div className="mt-1 max-w-[260px]">
               <OwnerField value={qn.owner} onChange={(v) => upd("questions", i, { owner: v })} placeholder="Who should answer" />
             </div>
             <Evidence text={qn.evidence} />
@@ -349,21 +373,25 @@ function OwnerField({ value, onChange, placeholder = "Unassigned" }: { value: st
   return (
     <span className="inline-flex items-center gap-1.5 min-w-0">
       {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-hairline-2 shrink-0" />}
-      <input list="people" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} placeholder={placeholder} className={`quiet h-7 w-full text-[13px] ${value ? "" : "italic text-ink-4"}`} />
+      <input list="people" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} placeholder={placeholder} title={value ?? undefined} className={`quiet h-7 w-full truncate text-[13px] ${value ? "" : "italic text-ink-4"}`} />
     </span>
   );
 }
 
-function Section({ icon: Icon, title, count, hint, onAdd, children }: { icon: typeof FileText; title: string; count?: number; hint?: string; onAdd?: () => void; children: React.ReactNode }) {
+function Section({ icon: Icon, title, count, total, hint, onAdd, children }: { icon: typeof FileText; title: string; count?: number; total?: number; hint?: string; onAdd?: () => void; children: React.ReactNode }) {
   return (
     <div className="card overflow-hidden">
-      <div className="h-9 px-3 flex items-center gap-2 border-b border-hairline bg-surface-2">
-        <Icon className="size-3.5 text-ink-3" />
-        <span className="text-[13.5px] font-semibold">{title}</span>
-        {count !== undefined && <span className="text-xs text-ink-3 tabular-nums">{count}</span>}
-        {hint && <span className="ml-2 text-xs text-ink-3 truncate">{hint}</span>}
+      <div className="h-9 px-3 flex items-center gap-2 border-b border-hairline bg-surface-2 min-w-0">
+        <Icon className="size-3.5 text-ink-3 shrink-0" />
+        <span className="text-[13.5px] font-semibold whitespace-nowrap">{title}</span>
+        {count !== undefined && (
+          <span className="text-xs text-ink-3 tabular-nums whitespace-nowrap" title={total !== undefined && total !== count ? `${count} kept of ${total} suggested` : undefined}>
+            {total !== undefined && total !== count ? `${count} of ${total}` : count}
+          </span>
+        )}
+        {hint && <span className="ml-2 text-xs text-ink-3 truncate min-w-0">{hint}</span>}
         {onAdd && (
-          <button type="button" onClick={onAdd} className="ml-auto btn btn-ghost btn-sm">
+          <button type="button" onClick={onAdd} className="ml-auto btn btn-ghost btn-sm shrink-0">
             <Plus className="size-3" /> Add
           </button>
         )}
@@ -373,10 +401,19 @@ function Section({ icon: Icon, title, count, hint, onAdd, children }: { icon: ty
   );
 }
 
-function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
+// One suggestion under review. The checkbox is the approval: unticked suggestions stay visible but are never published.
+function Row({ children, kept, onKeep, onRemove }: { children: React.ReactNode; kept: boolean; onKeep: (v: boolean) => void; onRemove: () => void }) {
   return (
-    <div className="px-3 py-2.5 relative group row">
-      {children}
+    <div className={`pl-3 pr-10 py-2.5 relative group row flex items-start gap-2.5 ${kept ? "" : "bg-surface-2"}`}>
+      <input
+        type="checkbox"
+        checked={kept}
+        onChange={(e) => onKeep(e.target.checked)}
+        className="mt-[5px] accent-primary size-3.5 shrink-0 cursor-pointer"
+        aria-label={kept ? "Kept. Untick to leave this out of the publish" : "Skipped. Tick to publish it"}
+        title={kept ? "Will be published. Untick to skip." : "Skipped. Will not be published."}
+      />
+      <div className={`flex-1 min-w-0 ${kept ? "" : "opacity-50 [&_textarea]:line-through"}`}>{children}</div>
       <Remove onClick={onRemove} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100" />
     </div>
   );

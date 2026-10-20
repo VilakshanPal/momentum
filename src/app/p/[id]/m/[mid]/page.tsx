@@ -17,7 +17,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
 
   if (meeting.status === "published") {
     const items = await listMeetingItems(mid);
-    return <MeetingView meeting={meeting} projectName={project.name} projectId={id} items={items} carried={carried} people={people} markdown={momToMarkdown(meeting, items, project.name)} />;
+    return <MeetingView meeting={meeting} projectName={project.name} projectId={id} items={items} carried={carried} people={people} markdown={momToMarkdown(meeting, items, project.name)} justPublished={!!meeting.just_published} />;
   }
 
   const supersedable = await supersedableDecisions(id);

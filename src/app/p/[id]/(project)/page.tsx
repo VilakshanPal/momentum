@@ -5,7 +5,7 @@ import { getProject, listMeetings, openItems, projectPeople, projectStats } from
 import { TopBar } from "@/components/TopBar";
 import { NewMeeting } from "@/components/NewMeeting";
 import { OpenItem, PeopleList } from "@/components/ItemRow";
-import { AvatarStack, Empty, Status, fmtDate } from "@/components/ui";
+import { AvatarStack, Empty, Status, fmtDate, plural } from "@/components/ui";
 
 export default async function ProjectHome({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,16 +25,20 @@ export default async function ProjectHome({ params }: { params: Promise<{ id: st
       <div className="px-8 py-7 grid grid-cols-[minmax(0,1fr)_320px] gap-8">
         <section className="min-w-0">
           <div className="mb-6">
-            <h1 className="h-page">{project.name}</h1>
-            <div className="mt-1.5 flex items-center gap-2 text-[13px] text-ink-2">
-              {project.client && <span className="chip">{project.client}</span>}
-              {project.description && <span>{project.description}</span>}
-            </div>
+            <h1 className="h-page wrap-break-word">{project.name}</h1>
+            {project.client && (
+              <div className="mt-2">
+                <span className="chip max-w-full">
+                  <span className="truncate">{project.client}</span>
+                </span>
+              </div>
+            )}
+            {project.description && <p className="mt-1.5 text-[13px] text-ink-2 max-w-[640px] leading-relaxed">{project.description}</p>}
             <div className="mt-4 flex items-center gap-5 text-[13px] text-ink-2">
               <Stat icon={CalendarDays} n={stats.meetings} label="meetings" />
               <Stat icon={Gavel} n={stats.decisions} label="decisions" />
-              <Stat icon={ListChecks} n={stats.open_actions} label={`open of ${stats.actions} actions`} />
-              <Stat icon={CircleHelp} n={stats.open_questions} label={`open of ${stats.questions} questions`} />
+              <Stat icon={ListChecks} n={stats.open_actions} label={`open of ${plural(stats.actions, "action")}`} />
+              <Stat icon={CircleHelp} n={stats.open_questions} label={`open of ${plural(stats.questions, "question")}`} />
             </div>
           </div>
 
@@ -55,7 +59,7 @@ export default async function ProjectHome({ params }: { params: Promise<{ id: st
                         <span className="size-7 rounded-md bg-wash grid place-items-center text-ink-3 shrink-0">
                           <CalendarDays className="size-3.5" />
                         </span>
-                        <span className="truncate font-medium">{m.title}</span>
+                        <span className={`truncate font-medium ${m.title ? "" : "text-ink-3 italic"}`}>{m.title || "Untitled meeting"}</span>
                       </span>
                       <span className="text-ink-2 tabular-nums">{fmtDate(m.held_on, { day: "numeric", month: "short", year: "numeric" })}</span>
                       <span>{m.participants.length ? <AvatarStack names={m.participants} /> : <span className="text-ink-3 text-xs">None listed</span>}</span>
@@ -108,7 +112,7 @@ function Stat({ icon: Icon, n, label }: { icon: typeof CalendarDays; n: number; 
   return (
     <span className="inline-flex items-center gap-1.5">
       <Icon className="size-3.5 text-ink-3" />
-      <span className="font-semibold text-ink tabular-nums">{n}</span>
+      <span className="font-semibold text-ink tabular-nums">{n.toLocaleString("en-GB")}</span>
       <span>{label}</span>
     </span>
   );

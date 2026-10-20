@@ -35,10 +35,12 @@ export default async function Decisions({ params }: { params: Promise<{ id: stri
             {groups.map((g) => (
               <li key={g.meeting_id} className="pl-6">
                 <span className="absolute -left-[5px] mt-1.5 size-[9px] rounded-full bg-surface border-2 border-ink-3" />
-                <Link href={`/p/${id}/m/${g.meeting_id}`} className="inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
-                  <CalendarDays className="size-3.5 text-ink-3" />
-                  <span className="font-medium text-ink">{g.title}</span>
-                  <span className="tabular-nums">{fmtDate(g.held_on, { day: "numeric", month: "long", year: "numeric" })}</span>
+                <Link href={`/p/${id}/m/${g.meeting_id}`} className="flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink min-w-0">
+                  <CalendarDays className="size-3.5 text-ink-3 shrink-0" />
+                  <span className="font-medium text-ink truncate" title={g.title}>
+                    {g.title || "Untitled meeting"}
+                  </span>
+                  <span className="tabular-nums whitespace-nowrap shrink-0">{fmtDate(g.held_on, { day: "numeric", month: "long", year: "numeric" })}</span>
                 </Link>
                 <div className="card mt-2 divide-y divide-hairline">
                   {g.items.map((d) => {
@@ -48,19 +50,19 @@ export default async function Decisions({ params }: { params: Promise<{ id: stri
                       <article key={d.id} className="px-4 py-3 flex items-start gap-3">
                         <Status value={d.status} pill className="mt-0.5 w-28 justify-start" />
                         <div className="flex-1 min-w-0">
-                          <p className={`font-medium ${d.status === "superseded" ? "text-ink-3 line-through" : ""}`}>{d.title}</p>
-                          {d.detail && <p className="text-ink-2 text-[13px] mt-0.5">{d.detail}</p>}
+                          <p className={`font-medium wrap-break-word ${d.status === "superseded" ? "text-ink-3 line-through" : ""}`}>{d.title}</p>
+                          {d.detail && <p className="text-ink-2 text-[13px] mt-0.5 wrap-break-word">{d.detail}</p>}
                           {d.evidence && <p className="evidence mt-2">“{d.evidence}”</p>}
                           {(older || newer) && (
                             <div className="mt-2 flex flex-wrap gap-2 text-xs">
                               {older && (
-                                <span className="chip">
-                                  <ArrowDownLeft className="size-3" /> Replaces: {older.title}
+                                <span className="chip max-w-full" title={older.title}>
+                                  <ArrowDownLeft className="size-3 shrink-0" /> <span className="truncate">Replaces: {older.title}</span>
                                 </span>
                               )}
                               {newer && (
-                                <span className="chip text-amber bg-amber/10">
-                                  <ArrowUpRight className="size-3" /> Replaced by: {newer.title}
+                                <span className="chip max-w-full text-amber bg-amber/10" title={newer.title}>
+                                  <ArrowUpRight className="size-3 shrink-0" /> <span className="truncate">Replaced by: {newer.title}</span>
                                 </span>
                               )}
                             </div>

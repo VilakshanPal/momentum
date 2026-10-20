@@ -1,16 +1,18 @@
-import { Briefcase, CalendarDays, ChevronRight, CircleCheck, CircleHelp, FileText, Gavel, ListChecks, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Briefcase, CalendarDays, ChevronRight, CircleCheck, CircleHelp, FileText, Gavel, ListChecks, Users } from "lucide-react";
 import type { Item, Meeting } from "@/lib/schema";
 import { OpenItem, PeopleList } from "./ItemRow";
 import { FollowUp } from "./FollowUp";
 import { CopyButton } from "./CopyButton";
 import { TopBar } from "./TopBar";
-import { Avatar, Status, fmtDate } from "./ui";
+import { Avatar, Status, fmtDate, plural } from "./ui";
 
-type Props = { meeting: Meeting; projectName: string; projectId: string; items: Item[]; carried: Item[]; people: string[]; markdown: string };
+type Props = { meeting: Meeting; projectName: string; projectId: string; items: Item[]; carried: Item[]; people: string[]; markdown: string; justPublished?: boolean };
 
-export function MeetingView({ meeting, projectName, projectId, items, carried, people, markdown }: Props) {
+export function MeetingView({ meeting, projectName, projectId, items, carried, people, markdown, justPublished = false }: Props) {
   const mom = meeting.mom!;
   const by = (k: Item["kind"]) => items.filter((i) => i.kind === k);
+  const applied = mom.carried_updates.filter((u) => u.accepted).length;
 
   return (
     <>
@@ -18,6 +20,22 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
         <CopyButton text={markdown} label="Copy as Markdown" />
       </TopBar>
       <PeopleList people={people} />
+
+      {justPublished && (
+        <div className="mx-8 mt-5 card enter flex items-center gap-3 px-4 py-3 border-green/30 bg-green/5">
+          <CircleCheck className="size-4 text-green shrink-0" />
+          <p className="text-[13px] min-w-0">
+            <span className="font-medium">Published.</span>{" "}
+            <span className="text-ink-2">
+              {plural(by("action").length, "action")} and {plural(by("question").length, "question")} are live on the board, {plural(by("decision").length, "decision")} in the log
+              {applied ? `, ${plural(applied, "carried item")} updated` : ""}. Next: draft the follow-up on the right.
+            </span>
+          </p>
+          <Link href={`/p/${projectId}/board`} className="ml-auto btn btn-sm shrink-0">
+            Open board <ArrowRight className="size-3" />
+          </Link>
+        </div>
+      )}
 
       <div className="px-8 pt-6 pb-5 border-b border-hairline">
         <h1 className="h-page">{meeting.title}</h1>
@@ -139,13 +157,13 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
 
           <details className="group">
             <summary className="cursor-pointer select-none list-none inline-flex items-center gap-1 text-[13px] font-medium text-ink-2 hover:text-ink">
-              <ChevronRight className="size-3.5 transition-transform group-open:rotate-90" /> Original notes
+              <ChevronRight className="size-3.5 transition-transform duration-150 ease-(--ease-out) group-open:rotate-90" /> Original notes
             </summary>
             <pre className="mt-2 card px-4 py-3 whitespace-pre-wrap font-sans text-[13px] leading-relaxed text-ink-2">{meeting.raw_notes || "No notes were saved."}</pre>
           </details>
         </article>
 
-        <aside className="px-6 py-6 bg-surface-2 flex flex-col gap-6">
+        <aside className="px-6 py-6 bg-surface-2 flex flex-col gap-6 sticky top-12 self-start max-h-[calc(100vh-48px)] overflow-y-auto">
           <FollowUp meetingId={meeting.id} />
           <div>
             <div className="flex items-center gap-2 mb-1">

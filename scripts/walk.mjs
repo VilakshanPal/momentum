@@ -1,5 +1,5 @@
-// Drives the real flow in the installed Chrome and saves screenshots. Dev-only.
-// Usage: node scripts/walk.mjs <outDir> [--generate]
+// Drives the real review flow in the installed Chrome and saves screenshots. Dev-only.
+// Usage: node scripts/walk.mjs <outDir> [--generate]   (--generate runs generation, unticks one action, publishes)
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 
@@ -35,15 +35,36 @@ await page.getByRole("button", { name: "Use sample notes" }).click();
 await page.waitForTimeout(400);
 await shot("editor-notes");
 if (generate) {
-  await page.getByRole("button", { name: "Generate draft" }).click();
+  const t0 = Date.now();
+  await page.locator("textarea").first().focus();
+  await page.keyboard.press("Control+Enter");
   await page.waitForTimeout(800);
   await shot("editor-generating");
   await page.getByText("Review, edit, then publish").waitFor({ timeout: 60000 });
   await page.waitForTimeout(600);
+  console.log("generated in", ((Date.now() - t0) / 1000).toFixed(1), "s");
   await shot("editor-draft");
-  await page.mouse.wheel(0, 900);
+  const before = await page.getByRole("button", { name: /^Publish/ }).innerText();
+  // Reject the first action item, accept every carried-forward update.
+  const boxes = page.locator("input[type=checkbox]");
+  await boxes.nth(3).click();
+  for (const cb of await page.locator("label input[type=checkbox]").all()) await cb.check();
   await page.waitForTimeout(300);
-  await shot("editor-draft-2");
+  const after = await page.getByRole("button", { name: /^Publish/ }).innerText();
+  console.log("publish button:", before, "->", after);
+  await page.mouse.move(1200, 500);
+  await page.mouse.wheel(0, 700);
+  await page.waitForTimeout(300);
+  await shot("editor-draft-reviewed");
+  await page.waitForTimeout(1200); // autosave
+  await page.getByRole("button", { name: /^Publish/ }).click();
+  await page.getByText("Published.", { exact: false }).first().waitFor({ timeout: 30000 });
+  await page.waitForTimeout(600);
+  await shot("published-banner");
+  await page.getByRole("link", { name: "Open board" }).click();
+  await page.waitForURL(/\/board/);
+  await page.waitForTimeout(500);
+  await shot("board-after-publish");
 }
 console.log("done", generate ? "(with generation)" : "");
 await b.close();

@@ -25,6 +25,26 @@ Updated at the end of every work block. Read this first.
 | 16b | Mock LLM with golden drafts for the sample notes and a Fireflies-style transcript; both flows walked in Chrome | done |
 | 17 | Fresh/incognito walkthrough on the deployed URL | todo (after 14) |
 | 18 | ClickUp one-way export | decide 27 Oct |
+| 19 | Design pass 2: break-ui worst-case seed, fixes, composition polish, animation review | done |
+| 20 | Seamless review: keep/skip checkbox per suggestion, publish count, post-publish next steps, action detail editable, Ctrl+Enter | done, walked end to end with the real model |
+
+## Spec coverage (product (1).md)
+
+| Spec item | State |
+|---|---|
+| P0.1 project, env, migrations, early deploy | code done; deploy blocked on credentials (task 14) |
+| P0.2 data model + seed with decision, unresolved action, blocked task, open question | done |
+| P0.3 notes to validated draft, server-only LLM, evidence, nulls never invented, retry keeps notes | done |
+| P0.4 review before persistence: edit, confirm, reject, remove; publish only after review | done (checkbox = confirm/reject, X = remove, status menu on decisions) |
+| 2.1 projects and meeting history, originating meeting visible | done |
+| 2.2 publish persists reviewed record, server validation, draft kept on failure | done |
+| 2.3 action tracking: title, detail, owner, date, status, blocker, origin; inline edits | done (detail now editable on the board) |
+| 2.4 carry-forward without duplicates, decision history with supersede | done |
+| 2.5 open questions separate, follow-up draft with copy, nothing sent | done |
+| 2.6 no signup, seeded continuity, loading/empty/error states, incognito test | done except incognito test on the live URL (after deploy) |
+| 3.1 ClickUp export | not started; go/no-go 27 Oct |
+| 3.2 Fireflies import | pasted transcripts work; API import not started |
+| 3.3 Markdown export, keyboard flow, empty states, hierarchy | done |
 
 ## Timeline (deadline Fri 30 Oct 2026, 11:59 pm IST)
 - 20 Oct: tasks 1–13 ✔
@@ -44,6 +64,7 @@ Updated at the end of every work block. Read this first.
 See README.md. `npm run db` → `npm run db:migrate` → `npm run db:seed` → `npm run dev`.
 
 ## Log
+- 2026-10-20 23:50: Design pass 2. Seamless review: every suggestion has a keep/skip checkbox, Publish shows the count, published meeting shows what went where and what to do next, action detail visible and editable, Ctrl+Enter generates. break-ui: worst-case project seeded through the DB (scripts/seed-worst.ts), eight screens reviewed at 1568 and 1024, seven breaks fixed, local Postgres re-initialised as UTF8. Full flow walked with the real model: 8 suggestions, one unticked, 7 records created, 4 carried items updated. Build, lint, tsc clean.
 - 2026-10-20 23:30: Design pass 1 on the installed skills: DESIGN.md tokens applied everywhere, motion rules from emil-design-eng, Base UI status menu, Playwright screenshot scripts. Reviewed all seven screens; fixed clipped notes pane, decision detail layout, avatar stacks. Awaiting approval before pass 2 (break-ui worst-case data, remaining composition polish).
 - 2026-10-20 04:30: Provider switched to OpenAI (user has OpenAI keys only). Real generation tested on the sample notes: accurate, evidence on every item, participants picked up, relative dates resolved correctly. First run took 47s at default reasoning; low effort brings it to under 10s. Prompt tightened: 3 to 6 discussion points, only real status changes in carried updates, never backwards. Cross-kind statuses coerced server-side.
 - 2026-10-20 03:30: UI rebuilt after feedback (generic look rejected). Tested sample-notes flow and pasted-transcript flow end to end with the mock, including participants auto-fill, carried-forward updates, publish, board, decisions. Em dashes removed everywhere. Production build clean.

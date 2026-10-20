@@ -45,11 +45,13 @@ export function avatarColor(name: string) {
   return PALETTE[h % PALETTE.length];
 }
 
+// Grapheme-safe: "Dana 🦄" gives "D🦄", not a broken surrogate half. Emails use the part before the @.
 export function initials(name: string, letters: 1 | 2 = 2) {
-  const clean = name.replace(/\(.*?\)/g, "").trim();
-  const parts = clean.split(/\s+/).filter(Boolean);
-  const two = (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "");
-  return (letters === 1 ? two.slice(0, 1) : two).toUpperCase() || "?";
+  const clean = name.replace(/\(.*?\)/g, "").split("@")[0].trim();
+  const parts = clean.split(/[\s._-]+/).filter(Boolean);
+  const first = (s: string | undefined) => (s ? Array.from(s)[0] : "");
+  const two = [first(parts[0]), first(parts[1])].slice(0, letters).join("");
+  return two.toUpperCase() || "?";
 }
 
 export function Avatar({ name, size = 22, letters = 2, className = "" }: { name: string; size?: number; letters?: 1 | 2; className?: string }) {
@@ -67,10 +69,11 @@ export function Avatar({ name, size = 22, letters = 2, className = "" }: { name:
 
 export function Person({ name, muted = false }: { name: string | null; muted?: boolean }) {
   if (!name) return <span className={`text-[13px] italic ${muted ? "text-ink-3" : "text-ink-3"}`}>Unassigned</span>;
+  const shown = name.replace(/\s*\(.*?\)\s*/g, "");
   return (
-    <span className="inline-flex items-center gap-1.5 text-[13px] text-ink min-w-0">
+    <span className="inline-flex items-center gap-1.5 text-[13px] text-ink min-w-0 max-w-full" title={name}>
       <Avatar name={name} size={20} />
-      <span className="truncate">{name.replace(/\s*\(.*?\)\s*/g, "")}</span>
+      <span className="truncate">{shown}</span>
     </span>
   );
 }
@@ -98,6 +101,8 @@ export function fmtDate(d: string | null | undefined, opts: Intl.DateTimeFormatO
   if (!d) return "";
   return new Intl.DateTimeFormat("en-GB", { ...opts, timeZone: "UTC" }).format(new Date(d + (d.length === 10 ? "T00:00:00Z" : "")));
 }
+
+export const plural = (n: number, word: string) => `${n.toLocaleString("en-GB")} ${word}${n === 1 ? "" : "s"}`;
 
 export function isOverdue(d: string | null | undefined) {
   return !!d && d < new Date().toLocaleDateString("en-CA");

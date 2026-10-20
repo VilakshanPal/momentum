@@ -285,4 +285,8 @@ textarea {
   .btn:active {
     transform: none;
   }
+  .skeleton {
+    animation: none;
+    background: var(--color-wash);
+  }
 }
