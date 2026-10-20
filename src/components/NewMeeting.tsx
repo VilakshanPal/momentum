@@ -4,14 +4,14 @@ import { useState } from "react";
 import { Plus } from "lucide-react";
 import { createMeeting } from "@/lib/actions";
 
-export function NewMeeting({ projectId }: { projectId: string }) {
+export function NewMeeting({ projectId, label = "New meeting", primary = true }: { projectId: string; label?: string; primary?: boolean }) {
   const [open, setOpen] = useState(false);
   const today = new Date().toLocaleDateString("en-CA");
   if (!open)
     return (
-      <button className="btn btn-primary" onClick={() => setOpen(true)}>
+      <button className={`btn ${primary ? "btn-primary" : ""}`} onClick={() => setOpen(true)}>
         <Plus className="size-3.5" />
-        New meeting
+        {label}
       </button>
     );
   return (

@@ -4,6 +4,7 @@ import type { Item, Meeting } from "@/lib/schema";
 import { OpenItem, PeopleList } from "./ItemRow";
 import { FollowUp } from "./FollowUp";
 import { CopyButton } from "./CopyButton";
+import { NewMeeting } from "./NewMeeting";
 import { TopBar } from "./TopBar";
 import { Avatar, Status, fmtDate, plural } from "./ui";
 
@@ -174,6 +175,10 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
             <div className="card divide-y divide-hairline">
               {carried.length ? carried.map((i) => <OpenItem key={i.id} item={i} projectId={projectId} />) : <p className="px-3 py-3 text-ink-3 text-[13px]">Nothing was carried in.</p>}
             </div>
+          </div>
+          <div className="border-t border-hairline pt-5">
+            <p className="text-xs text-ink-3 mb-2 leading-relaxed">Whatever is still open here carries into the next meeting on its own.</p>
+            <NewMeeting projectId={projectId} label="Start the next meeting" primary={false} />
           </div>
         </aside>
       </div>
