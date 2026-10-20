@@ -45,13 +45,14 @@ export function avatarColor(name: string) {
   return PALETTE[h % PALETTE.length];
 }
 
-export function initials(name: string) {
+export function initials(name: string, letters: 1 | 2 = 2) {
   const clean = name.replace(/\(.*?\)/g, "").trim();
   const parts = clean.split(/\s+/).filter(Boolean);
-  return ((parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "")).toUpperCase() || "?";
+  const two = (parts[0]?.[0] ?? "") + (parts[1]?.[0] ?? "");
+  return (letters === 1 ? two.slice(0, 1) : two).toUpperCase() || "?";
 }
 
-export function Avatar({ name, size = 22, className = "" }: { name: string; size?: number; className?: string }) {
+export function Avatar({ name, size = 22, letters = 2, className = "" }: { name: string; size?: number; letters?: 1 | 2; className?: string }) {
   const [bg, fg] = avatarColor(name);
   return (
     <span
@@ -59,7 +60,7 @@ export function Avatar({ name, size = 22, className = "" }: { name: string; size
       className={`inline-grid place-items-center rounded-full font-semibold shrink-0 ${bg} ${fg} ${className}`}
       style={{ width: size, height: size, fontSize: Math.round(size * 0.42) }}
     >
-      {initials(name)}
+      {initials(name, letters)}
     </span>
   );
 }
@@ -80,7 +81,7 @@ export function AvatarStack({ names, max = 4 }: { names: string[]; max?: number 
   return (
     <span className="inline-flex items-center">
       {shown.map((n, i) => (
-        <Avatar key={n} name={n} size={24} className={`ring-2 ring-surface ${i ? "-ml-2" : ""}`} />
+        <Avatar key={n} name={n} size={24} letters={1} className={`ring-2 ring-surface ${i ? "-ml-1.5" : ""}`} />
       ))}
       {rest > 0 && <span className="-ml-2 size-6 rounded-full bg-wash-2 text-ink-2 text-[10px] font-medium grid place-items-center ring-2 ring-surface">+{rest}</span>}
     </span>

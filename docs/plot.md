@@ -44,6 +44,7 @@ Updated at the end of every work block. Read this first.
 See README.md. `npm run db` → `npm run db:migrate` → `npm run db:seed` → `npm run dev`.
 
 ## Log
+- 2026-10-20 23:30: Design pass 1 on the installed skills: DESIGN.md tokens applied everywhere, motion rules from emil-design-eng, Base UI status menu, Playwright screenshot scripts. Reviewed all seven screens; fixed clipped notes pane, decision detail layout, avatar stacks. Awaiting approval before pass 2 (break-ui worst-case data, remaining composition polish).
 - 2026-10-20 04:30: Provider switched to OpenAI (user has OpenAI keys only). Real generation tested on the sample notes: accurate, evidence on every item, participants picked up, relative dates resolved correctly. First run took 47s at default reasoning; low effort brings it to under 10s. Prompt tightened: 3 to 6 discussion points, only real status changes in carried updates, never backwards. Cross-kind statuses coerced server-side.
 - 2026-10-20 03:30: UI rebuilt after feedback (generic look rejected). Tested sample-notes flow and pasted-transcript flow end to end with the mock, including participants auto-fill, carried-forward updates, publish, board, decisions. Em dashes removed everywhere. Production build clean.
 - 2026-10-20 00:30: Plan accepted. Build started. Decisions 1–8 recorded.

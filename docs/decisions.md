@@ -60,3 +60,12 @@ User rule. UI copy, seed data, prompts, docs, commit messages. Grep for the char
 
 ## 2026-10-20: LLM provider is OpenAI, not Anthropic
 User has OpenAI API access only. `src/lib/llm.ts` now uses the OpenAI Responses API with `zodTextFormat` structured output against the same `MomSchema`; follow-up uses `responses.create` and `output_text`. Model defaults to `gpt-5.5`, overridable with `OPENAI_MODEL`. Validation, mock fallback and error handling are unchanged.
+
+## 2026-10-20: Design system source of truth is DESIGN.md
+`npx getdesign@latest add notion` installed `DESIGN.md` (an independent analysis of Notion's language). All colour, type, radius, spacing and elevation tokens in `globals.css` now derive from it: warm canvas #f6f5f4, white surfaces with #e6e6e6 hairlines, near-black Inter with negative tracking on headings, a single blue (#0075de) for actions and the active indicator, the sticker palette for status and avatars only, layered micro-shadows instead of drop shadows.
+
+## 2026-10-20: Motion rules from emil-design-eng
+`npx skills add emilkowalski/skill` installed the skills under `.agents/skills` (symlinked into `.claude/skills`). Applied: press feedback `scale(0.97)` on every button, strong `--ease-out` curve, all UI transitions under 250ms, popovers scale from their trigger, hover styles gated behind `(hover: hover)`, `prefers-reduced-motion` strips movement, draft sections stagger 40ms after generation. The status dropdown moved to Base UI (`@base-ui/react`) per `pick-ui-library`: focus management, keyboard navigation and dismissal without hand-rolling.
+
+## 2026-10-20: Screenshots via Playwright on the installed Chrome
+The Claude browser extension stopped reaching localhost mid-session. `scripts/shots.mjs` and `scripts/walk.mjs` drive the installed Chrome through Playwright (`channel: "chrome"`, no browser download) and write to `.shots/` (gitignored). Used for every design review pass.

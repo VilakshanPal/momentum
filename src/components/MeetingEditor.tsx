@@ -124,7 +124,7 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
 
       <div className="flex-1 grid grid-cols-2 divide-x divide-hairline min-h-0">
         {/* Notes */}
-        <section className="px-8 py-6 flex flex-col gap-6 min-w-0 sticky top-12 self-start max-h-[calc(100vh-48px)] overflow-y-auto">
+        <section className="px-8 py-6 flex flex-col gap-6 min-w-0 sticky top-12 self-start max-h-[calc(100vh-48px)] overflow-y-auto [&>*]:shrink-0">
           <div className="card overflow-hidden">
             <div className="h-10 px-3 flex items-center gap-2 border-b border-hairline bg-surface-2">
               <FileText className="size-3.5 text-ink-3" />
@@ -267,22 +267,20 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
               </button>
               <textarea value={d.title} onChange={(e) => upd("decisions", i, { title: e.target.value })} className="quiet flex-1 font-medium resize-none text-[13.5px]" rows={1} placeholder="What was decided" />
             </div>
-            <div className="mt-1 flex items-center gap-3 pl-0.5">
-              <input value={d.detail ?? ""} onChange={(e) => upd("decisions", i, { detail: e.target.value || null })} placeholder="Add detail" className="quiet h-7 flex-1 text-[13px] text-ink-2" />
-              {supersedable.length > 0 && (
-                <label className="inline-flex items-center gap-1.5 text-xs text-ink-2 shrink-0">
-                  Replaces
-                  <select value={d.supersedes_id ?? ""} onChange={(e) => upd("decisions", i, { supersedes_id: e.target.value || null })} className="quiet h-7 text-xs max-w-56 truncate">
-                    <option value="">nothing</option>
-                    {supersedable.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.title} ({fmtDate(s.meeting_held_on)})
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </div>
+            <textarea value={d.detail ?? ""} onChange={(e) => upd("decisions", i, { detail: e.target.value || null })} placeholder="Add detail" className="quiet mt-1 w-full text-[13px] text-ink-2 resize-none leading-snug" rows={1} />
+            {supersedable.length > 0 && (
+              <label className="mt-1 inline-flex items-center gap-1.5 text-xs text-ink-3">
+                Replaces an earlier decision
+                <select value={d.supersedes_id ?? ""} onChange={(e) => upd("decisions", i, { supersedes_id: e.target.value || null })} className="quiet h-7 text-xs max-w-72 truncate text-ink-2">
+                  <option value="">No</option>
+                  {supersedable.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.title} ({fmtDate(s.meeting_held_on)})
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <Evidence text={d.evidence} />
           </Row>
         ))}
@@ -318,7 +316,7 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
       </Section>
 
       {draft.carried_updates.length > 0 && (
-        <Section icon={RotateCw} title="Carried-forward work mentioned in these notes" count={draft.carried_updates.length} hint="Tick to apply on publish. Unticked means no change.">
+        <Section icon={RotateCw} title="Carried-forward updates" count={draft.carried_updates.length} hint="Mentioned in these notes. Tick to apply on publish.">
           {draft.carried_updates.map((u, i) => {
             const c = carriedById.get(u.item_id);
             if (!c) return null;
