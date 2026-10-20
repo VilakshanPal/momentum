@@ -91,7 +91,7 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
   return (
     <>
       <TopBar crumbs={[{ label: projectName, href: `/p/${projectId}`, icon: Briefcase }, { label: title || "Untitled meeting", icon: PenLine }]}>
-        <span className={`text-xs mr-1 ${save === "error" ? "text-t-red-fg" : "text-ink-3"}`}>{{ saved: "Saved", saving: "Saving…", dirty: "Unsaved changes", error: "Save failed" }[save]}</span>
+        <span className={`text-xs mr-1 ${save === "error" ? "text-red" : "text-ink-3"}`}>{{ saved: "Saved", saving: "Saving…", dirty: "Unsaved changes", error: "Save failed" }[save]}</span>
         <button className="btn" onClick={generate} disabled={generating || over || tooShort} title={tooShort ? "Add some notes first" : undefined}>
           {generating ? <Spinner /> : draft ? <RotateCw className="size-3.5" /> : <Sparkles className="size-3.5" />}
           {draft ? "Regenerate" : "Generate draft"}
@@ -103,12 +103,12 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
       </TopBar>
       <PeopleList people={people} />
 
-      <div className="px-8 pt-6 pb-4 border-b border-line">
-        <input value={title} onChange={(e) => setTitle(e.target.value)} className="quiet text-[26px] font-semibold tracking-tight w-full leading-tight" placeholder="Untitled meeting" />
+      <div className="px-8 pt-6 pb-4 border-b border-hairline">
+        <input value={title} onChange={(e) => setTitle(e.target.value)} className="quiet h-page w-full" placeholder="Untitled meeting" />
         <div className="mt-2 flex items-center gap-5 text-[13px] text-ink-2">
           <label className="inline-flex items-center gap-1.5">
             <CalendarDays className="size-3.5 text-ink-3" />
-            <span className="relative inline-flex items-center hover:bg-paper-3 rounded px-1 -mx-1 h-7 cursor-pointer">
+            <span className="relative inline-flex items-center hover:bg-wash rounded px-1 -mx-1 h-7 cursor-pointer">
               {fmtDate(heldOn, { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
               <input type="date" value={heldOn} onChange={(e) => e.target.value && setHeldOn(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer" aria-label="Meeting date" />
             </span>
@@ -119,17 +119,17 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
           </label>
           <Status value="draft" pill />
         </div>
-        {pubErr && <p className="mt-2 text-xs text-t-red-fg">{pubErr}</p>}
+        {pubErr && <p className="mt-2 text-xs text-red">{pubErr}</p>}
       </div>
 
-      <div className="flex-1 grid grid-cols-2 divide-x divide-line min-h-0">
+      <div className="flex-1 grid grid-cols-2 divide-x divide-hairline min-h-0">
         {/* Notes */}
         <section className="px-8 py-6 flex flex-col gap-6 min-w-0 sticky top-12 self-start max-h-[calc(100vh-48px)] overflow-y-auto">
           <div className="card overflow-hidden">
-            <div className="h-10 px-3 flex items-center gap-2 border-b border-line bg-paper-2/60">
+            <div className="h-10 px-3 flex items-center gap-2 border-b border-hairline bg-surface-2">
               <FileText className="size-3.5 text-ink-3" />
               <span className="text-[13px] font-medium">Rough notes</span>
-              <span className={`ml-auto text-xs tabular-nums ${over ? "text-t-red-fg" : "text-ink-3"}`}>
+              <span className={`ml-auto text-xs tabular-nums ${over ? "text-red" : "text-ink-3"}`}>
                 {notes.length.toLocaleString()} / {MAX_NOTES_CHARS.toLocaleString()}
               </span>
               {!notes.trim() && (
@@ -152,21 +152,21 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
 
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-[13px] font-semibold">Carried forward into this meeting</h2>
+              <h2 className="h-title">Carried forward into this meeting</h2>
               <span className="chip h-5 px-1.5 text-[11px] tabular-nums">{carried.length}</span>
             </div>
             <p className="text-xs text-ink-3 mb-2 leading-relaxed">Still unresolved from earlier meetings. Same records, not copies. Update them here instead of re-adding them.</p>
-            <div className="card divide-y divide-line">
+            <div className="card divide-y divide-hairline">
               {carried.length ? carried.map((i) => <OpenItem key={i.id} item={i} projectId={projectId} />) : <p className="px-3 py-3 text-ink-3 text-[13px]">Nothing carried over.</p>}
             </div>
           </div>
         </section>
 
         {/* Draft */}
-        <section className="px-8 py-6 bg-paper-2/50 min-w-0">
+        <section className="px-8 py-6 bg-surface-2 min-w-0">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="size-4 text-accent" />
-            <h2 className="text-[13px] font-semibold">AI draft</h2>
+            <Sparkles className="size-4 text-primary" />
+            <h2 className="h-title">AI draft</h2>
             <span className="text-xs text-ink-3">{draft ? "Review, edit, then publish. Remove anything wrong." : "Nothing generated yet."}</span>
             {draft && (
               <span className="ml-auto flex items-center gap-1.5 text-xs text-ink-2 tabular-nums">
@@ -184,7 +184,7 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
           </div>
 
           {genErr && (
-            <div className="card border-t-red-fg/30 bg-t-red-bg/50 px-3 py-2 text-[13px] text-t-red-fg flex items-center justify-between mb-3">
+            <div className="card border-red/30 bg-red/5 px-3 py-2 text-[13px] text-red flex items-center justify-between mb-3">
               <span>{genErr}</span>
               <button className="btn btn-sm" onClick={generate}>
                 Retry
@@ -215,7 +215,7 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
 function Step({ n, title, body }: { n: number; title: string; body: string }) {
   return (
     <li className="flex gap-3">
-      <span className="size-5 rounded-full bg-paper-3 text-ink-2 text-[11px] font-semibold grid place-items-center shrink-0 mt-px">{n}</span>
+      <span className="size-5 rounded-full bg-wash text-ink-2 text-[11px] font-semibold grid place-items-center shrink-0 mt-px">{n}</span>
       <span>
         <span className="font-medium text-ink">{title}</span>
         <span className="block text-ink-2 leading-relaxed">{body}</span>
@@ -236,7 +236,7 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
   const carriedById = new Map(carried.map((c) => [c.id, c]));
 
   return (
-    <div className="flex flex-col gap-4 fade-in">
+    <div className="flex flex-col gap-4 enter-stagger">
       <Section icon={FileText} title="Summary">
         <div className="px-3 py-2.5">
           <textarea value={draft.summary} onChange={(e) => set("summary", e.target.value)} className="quiet w-full leading-relaxed resize-none text-[13.5px]" />
@@ -259,7 +259,7 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
             <div className="flex items-start gap-2">
               <button
                 type="button"
-                className="shrink-0 mt-0.5 hover:bg-paper-3 rounded px-1 -mx-1"
+                className="shrink-0 mt-0.5 hover:bg-wash rounded px-1 -mx-1"
                 onClick={() => upd("decisions", i, { status: d.status === "confirmed" ? "proposed" : "confirmed" })}
                 title="Toggle proposed / confirmed"
               >
@@ -296,7 +296,7 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
             <div className="mt-1 grid grid-cols-[170px_120px_minmax(0,1fr)] items-center gap-3">
               <OwnerField value={a.owner} onChange={(v) => upd("actions", i, { owner: v })} />
               <DateCell value={a.due_on} onChange={(v) => upd("actions", i, { due_on: v })} />
-              <input value={a.blocker ?? ""} onChange={(e) => upd("actions", i, { blocker: e.target.value || null })} placeholder="Blocked by (optional)" className={`quiet h-7 text-[13px] ${a.blocker ? "text-t-red-fg" : ""}`} />
+              <input value={a.blocker ?? ""} onChange={(e) => upd("actions", i, { blocker: e.target.value || null })} placeholder="Blocked by (optional)" className={`quiet h-7 text-[13px] ${a.blocker ? "text-red" : ""}`} />
             </div>
             <Evidence text={a.evidence} />
           </Row>
@@ -323,8 +323,8 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
             const c = carriedById.get(u.item_id);
             if (!c) return null;
             return (
-              <label key={u.item_id} className="px-3 py-2.5 flex items-start gap-2.5 cursor-pointer row-hover">
-                <input type="checkbox" checked={!!u.accepted} onChange={(e) => upd("carried_updates", i, { accepted: e.target.checked })} className="mt-1 accent-accent size-3.5" />
+              <label key={u.item_id} className="px-3 py-2.5 flex items-start gap-2.5 cursor-pointer row">
+                <input type="checkbox" checked={!!u.accepted} onChange={(e) => upd("carried_updates", i, { accepted: e.target.checked })} className="mt-1 accent-primary size-3.5" />
                 <span className="flex-1 min-w-0 text-[13px]">
                   <span className="font-medium">{c.title}</span>
                   <span className="mt-1 flex items-center gap-1.5 text-xs text-ink-2">
@@ -350,8 +350,8 @@ function DraftForm({ draft, onChange, carried, supersedable }: { draft: Draft; o
 function OwnerField({ value, onChange, placeholder = "Unassigned" }: { value: string | null; onChange: (v: string | null) => void; placeholder?: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 min-w-0">
-      {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-line-2 shrink-0" />}
-      <input list="people" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} placeholder={placeholder} className={`quiet h-7 w-full text-[13px] ${value ? "" : "italic text-ink-3"}`} />
+      {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-hairline-2 shrink-0" />}
+      <input list="people" value={value ?? ""} onChange={(e) => onChange(e.target.value || null)} placeholder={placeholder} className={`quiet h-7 w-full text-[13px] ${value ? "" : "italic text-ink-4"}`} />
     </span>
   );
 }
@@ -359,9 +359,9 @@ function OwnerField({ value, onChange, placeholder = "Unassigned" }: { value: st
 function Section({ icon: Icon, title, count, hint, onAdd, children }: { icon: typeof FileText; title: string; count?: number; hint?: string; onAdd?: () => void; children: React.ReactNode }) {
   return (
     <div className="card overflow-hidden">
-      <div className="h-9 px-3 flex items-center gap-2 border-b border-line bg-paper-2/60">
+      <div className="h-9 px-3 flex items-center gap-2 border-b border-hairline bg-surface-2">
         <Icon className="size-3.5 text-ink-3" />
-        <span className="text-[13px] font-medium">{title}</span>
+        <span className="text-[13.5px] font-semibold">{title}</span>
         {count !== undefined && <span className="text-xs text-ink-3 tabular-nums">{count}</span>}
         {hint && <span className="ml-2 text-xs text-ink-3 truncate">{hint}</span>}
         {onAdd && (
@@ -370,14 +370,14 @@ function Section({ icon: Icon, title, count, hint, onAdd, children }: { icon: ty
           </button>
         )}
       </div>
-      <div className="divide-y divide-line">{children}</div>
+      <div className="divide-y divide-hairline">{children}</div>
     </div>
   );
 }
 
 function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () => void }) {
   return (
-    <div className="px-3 py-2.5 relative group row-hover">
+    <div className="px-3 py-2.5 relative group row">
       {children}
       <Remove onClick={onRemove} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100" />
     </div>
@@ -386,7 +386,7 @@ function Row({ children, onRemove }: { children: React.ReactNode; onRemove: () =
 
 function Remove({ onClick, className = "" }: { onClick: () => void; className?: string }) {
   return (
-    <button type="button" onClick={onClick} title="Remove" className={`size-6 grid place-items-center rounded text-ink-3 hover:text-t-red-fg hover:bg-t-red-bg ${className}`}>
+    <button type="button" onClick={onClick} title="Remove" className={`size-6 grid place-items-center rounded text-ink-3 hover:text-red hover:bg-red/10 ${className}`}>
       <X className="size-3" />
     </button>
   );
@@ -405,7 +405,7 @@ function DraftSkeleton() {
       </p>
       {[2, 3, 4, 2].map((n, i) => (
         <div key={i} className="card overflow-hidden">
-          <div className="h-9 border-b border-line bg-paper-2/60" />
+          <div className="h-9 border-b border-hairline bg-surface-2" />
           <div className="p-3 flex flex-col gap-2">
             {Array.from({ length: n }).map((_, j) => (
               <div key={j} className="skeleton h-12" />

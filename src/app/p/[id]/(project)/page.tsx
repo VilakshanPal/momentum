@@ -25,7 +25,7 @@ export default async function ProjectHome({ params }: { params: Promise<{ id: st
       <div className="px-8 py-7 grid grid-cols-[minmax(0,1fr)_320px] gap-8">
         <section className="min-w-0">
           <div className="mb-6">
-            <h1 className="text-[26px] font-semibold tracking-tight leading-tight">{project.name}</h1>
+            <h1 className="h-page">{project.name}</h1>
             <div className="mt-1.5 flex items-center gap-2 text-[13px] text-ink-2">
               {project.client && <span className="chip">{project.client}</span>}
               {project.description && <span>{project.description}</span>}
@@ -39,20 +39,20 @@ export default async function ProjectHome({ params }: { params: Promise<{ id: st
           </div>
 
           <div className="card overflow-hidden">
-            <div className="grid grid-cols-[minmax(0,1fr)_110px_120px_150px_120px] gap-3 px-4 h-9 items-center border-b border-line bg-paper-2/60">
+            <div className="grid grid-cols-[minmax(0,1fr)_110px_120px_150px_120px] gap-3 px-4 h-9 items-center border-b border-hairline bg-surface-2">
               {["Meeting", "Date", "People", "Outcomes", "Status"].map((h) => (
-                <span key={h} className="label">
+                <span key={h} className="eyebrow">
                   {h}
                 </span>
               ))}
             </div>
             {meetings.length ? (
-              <ul className="divide-y divide-line">
+              <ul className="divide-y divide-hairline">
                 {meetings.map((m) => (
                   <li key={m.id}>
-                    <Link href={`/p/${id}/m/${m.id}`} className="row-hover grid grid-cols-[minmax(0,1fr)_110px_120px_150px_120px] items-center gap-3 px-4 h-12">
+                    <Link href={`/p/${id}/m/${m.id}`} className="row grid grid-cols-[minmax(0,1fr)_110px_120px_150px_120px] items-center gap-3 px-4 h-12">
                       <span className="flex items-center gap-2.5 min-w-0">
-                        <span className="size-7 rounded-md bg-paper-3 grid place-items-center text-ink-3 shrink-0">
+                        <span className="size-7 rounded-md bg-wash grid place-items-center text-ink-3 shrink-0">
                           <CalendarDays className="size-3.5" />
                         </span>
                         <span className="truncate font-medium">{m.title}</span>
@@ -87,7 +87,7 @@ export default async function ProjectHome({ params }: { params: Promise<{ id: st
 
         <aside className="min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="font-semibold">Open work</h2>
+            <h2 className="h-title">Open work</h2>
             <span className="chip h-5 px-1.5 text-[11px] tabular-nums">{open.length}</span>
           </div>
           <p className="text-xs text-ink-3 mb-3 leading-relaxed">Unresolved across every meeting. These carry into the next one automatically.</p>
@@ -117,12 +117,12 @@ function Stat({ icon: Icon, n, label }: { icon: typeof CalendarDays; n: number; 
 function Group({ icon: Icon, title, n, children }: { icon: typeof CalendarDays; title: string; n: number; children: React.ReactNode }) {
   return (
     <div className="card mb-3 overflow-hidden">
-      <div className="h-8 px-3 flex items-center gap-1.5 border-b border-line bg-paper-2/60 text-xs font-medium text-ink-2">
+      <div className="h-8 px-3 flex items-center gap-1.5 border-b border-hairline bg-surface-2 text-xs font-medium text-ink-2">
         <Icon className="size-3.5 text-ink-3" />
         {title}
         <span className="text-ink-3 tabular-nums">{n}</span>
       </div>
-      <div className="divide-y divide-line">{children}</div>
+      <div className="divide-y divide-hairline">{children}</div>
     </div>
   );
 }

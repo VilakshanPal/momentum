@@ -4,23 +4,23 @@ import type { ItemStatus } from "@/lib/schema";
 // ---- status: icon + label, Linear/ClickUp style ----
 
 export const STATUS: Record<string, { label: string; Icon: LucideIcon; fg: string; bg: string }> = {
-  todo: { label: "To do", Icon: Circle, fg: "text-t-gray-fg", bg: "bg-t-gray-bg" },
-  in_progress: { label: "In progress", Icon: CircleDot, fg: "text-t-blue-fg", bg: "bg-t-blue-bg" },
-  done: { label: "Done", Icon: CircleCheck, fg: "text-t-green-fg", bg: "bg-t-green-bg" },
-  blocked: { label: "Blocked", Icon: CircleX, fg: "text-t-red-fg", bg: "bg-t-red-bg" },
-  proposed: { label: "Proposed", Icon: CircleDashed, fg: "text-t-amber-fg", bg: "bg-t-amber-bg" },
-  confirmed: { label: "Confirmed", Icon: CircleCheck, fg: "text-t-green-fg", bg: "bg-t-green-bg" },
-  superseded: { label: "Superseded", Icon: CircleSlash, fg: "text-t-gray-fg", bg: "bg-t-gray-bg" },
-  open: { label: "Open", Icon: CircleHelp, fg: "text-t-orange-fg", bg: "bg-t-orange-bg" },
-  resolved: { label: "Resolved", Icon: CircleCheck, fg: "text-t-green-fg", bg: "bg-t-green-bg" },
-  draft: { label: "Draft", Icon: PenLine, fg: "text-t-amber-fg", bg: "bg-t-amber-bg" },
-  published: { label: "Published", Icon: CircleCheck, fg: "text-t-green-fg", bg: "bg-t-green-bg" },
+  todo: { label: "To do", Icon: Circle, fg: "text-ink-4", bg: "bg-wash" },
+  in_progress: { label: "In progress", Icon: CircleDot, fg: "text-sky", bg: "bg-sky/15" },
+  done: { label: "Done", Icon: CircleCheck, fg: "text-green", bg: "bg-green/10" },
+  blocked: { label: "Blocked", Icon: CircleX, fg: "text-red", bg: "bg-red/10" },
+  proposed: { label: "Proposed", Icon: CircleDashed, fg: "text-amber", bg: "bg-amber/10" },
+  confirmed: { label: "Confirmed", Icon: CircleCheck, fg: "text-green", bg: "bg-green/10" },
+  superseded: { label: "Superseded", Icon: CircleSlash, fg: "text-ink-4", bg: "bg-wash" },
+  open: { label: "Open", Icon: CircleHelp, fg: "text-orange", bg: "bg-orange/10" },
+  resolved: { label: "Resolved", Icon: CircleCheck, fg: "text-green", bg: "bg-green/10" },
+  draft: { label: "Draft", Icon: PenLine, fg: "text-amber", bg: "bg-amber/10" },
+  published: { label: "Published", Icon: CircleCheck, fg: "text-green", bg: "bg-green/10" },
 };
 
 export function Status({ value, pill = false, className = "" }: { value: ItemStatus | string; pill?: boolean; className?: string }) {
   const s = STATUS[value] ?? STATUS.todo;
   return (
-    <span className={`inline-flex items-center gap-1.5 text-[13px] whitespace-nowrap ${pill ? `h-6 px-2 rounded-full ${s.bg} ${s.fg} text-xs font-medium` : "text-ink"} ${className}`}>
+    <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-ink ${pill ? `h-6 pl-1.5 pr-2 rounded-full ${s.bg} text-xs font-medium` : "text-[13px]"} ${className}`}>
       <s.Icon className={`size-3.5 shrink-0 ${s.fg}`} strokeWidth={2.2} />
       {s.label}
     </span>
@@ -30,13 +30,13 @@ export function Status({ value, pill = false, className = "" }: { value: ItemSta
 // ---- avatars: stable colour per name ----
 
 const PALETTE = [
-  ["bg-t-blue-bg", "text-t-blue-fg"],
-  ["bg-t-green-bg", "text-t-green-fg"],
-  ["bg-t-purple-bg", "text-t-purple-fg"],
-  ["bg-t-amber-bg", "text-t-amber-fg"],
-  ["bg-t-orange-bg", "text-t-orange-fg"],
-  ["bg-t-teal-bg", "text-t-teal-fg"],
-  ["bg-t-red-bg", "text-t-red-fg"],
+  ["bg-sky/20", "text-primary"],
+  ["bg-green/15", "text-green"],
+  ["bg-purple/12", "text-purple"],
+  ["bg-amber/15", "text-amber"],
+  ["bg-orange/12", "text-orange"],
+  ["bg-teal/15", "text-teal"],
+  ["bg-pink/12", "text-pink"],
 ];
 
 export function avatarColor(name: string) {
@@ -80,9 +80,9 @@ export function AvatarStack({ names, max = 4 }: { names: string[]; max?: number 
   return (
     <span className="inline-flex items-center">
       {shown.map((n, i) => (
-        <Avatar key={n} name={n} size={22} className={`ring-2 ring-paper ${i ? "-ml-1.5" : ""}`} />
+        <Avatar key={n} name={n} size={24} className={`ring-2 ring-surface ${i ? "-ml-2" : ""}`} />
       ))}
-      {rest > 0 && <span className="-ml-1.5 size-[22px] rounded-full bg-paper-3 text-ink-2 text-[10px] font-medium grid place-items-center ring-2 ring-paper">+{rest}</span>}
+      {rest > 0 && <span className="-ml-2 size-6 rounded-full bg-wash-2 text-ink-2 text-[10px] font-medium grid place-items-center ring-2 ring-surface">+{rest}</span>}
     </span>
   );
 }
@@ -115,7 +115,7 @@ export function Empty({ icon: Icon, title, hint, action }: { icon?: LucideIcon; 
   return (
     <div className="py-10 px-6 text-center flex flex-col items-center gap-2">
       {Icon && (
-        <span className="size-9 rounded-lg bg-paper-3 grid place-items-center text-ink-3">
+        <span className="size-9 rounded-lg bg-wash grid place-items-center text-ink-4">
           <Icon className="size-4" />
         </span>
       )}
@@ -127,5 +127,5 @@ export function Empty({ icon: Icon, title, hint, action }: { icon?: LucideIcon; 
 }
 
 export function Kbd({ children }: { children: React.ReactNode }) {
-  return <kbd className="inline-grid place-items-center h-5 min-w-5 px-1 rounded border border-line-2 bg-paper-2 text-[11px] text-ink-2 font-sans">{children}</kbd>;
+  return <kbd className="inline-grid place-items-center h-5 min-w-5 px-1 rounded-xs border border-hairline-2 bg-surface-2 text-[11px] text-ink-2 font-sans">{children}</kbd>;
 }

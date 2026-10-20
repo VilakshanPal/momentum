@@ -19,8 +19,8 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
       </TopBar>
       <PeopleList people={people} />
 
-      <div className="px-8 pt-6 pb-5 border-b border-line">
-        <h1 className="text-[26px] font-semibold tracking-tight leading-tight">{meeting.title}</h1>
+      <div className="px-8 pt-6 pb-5 border-b border-hairline">
+        <h1 className="h-page">{meeting.title}</h1>
         <dl className="mt-3 grid grid-cols-[110px_minmax(0,1fr)] gap-y-1.5 gap-x-3 text-[13px] max-w-2xl">
           <Prop icon={CalendarDays} label="Date">
             {fmtDate(meeting.held_on, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
@@ -60,7 +60,7 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
         </dl>
       </div>
 
-      <div className="flex-1 grid grid-cols-[minmax(0,1fr)_360px] divide-x divide-line">
+      <div className="flex-1 grid grid-cols-[minmax(0,1fr)_360px] divide-x divide-hairline">
         <article className="px-8 py-6 flex flex-col gap-7 min-w-0">
           <section>
             <H2 icon={FileText}>Summary</H2>
@@ -85,7 +85,7 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
             <H2 icon={Gavel} count={by("decision").length}>
               Decisions
             </H2>
-            <div className="card divide-y divide-line">
+            <div className="card divide-y divide-hairline">
               {by("decision").map((d) => (
                 <div key={d.id} className="px-3 py-2.5 flex items-start gap-3">
                   <Status value={d.status} pill className="mt-0.5 w-28 justify-start" />
@@ -104,7 +104,7 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
             <H2 icon={ListChecks} count={by("action").length} hint="Live records. Status changes here show on the board.">
               Action items
             </H2>
-            <div className="card divide-y divide-line">
+            <div className="card divide-y divide-hairline">
               {by("action").map((a) => (
                 <div key={a.id}>
                   <OpenItem item={a} projectId={projectId} />
@@ -119,7 +119,7 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
             <H2 icon={CircleHelp} count={by("question").length}>
               Open questions
             </H2>
-            <div className="card divide-y divide-line">
+            <div className="card divide-y divide-hairline">
               {by("question").map((qn) => (
                 <div key={qn.id}>
                   <OpenItem item={qn} projectId={projectId} />
@@ -145,15 +145,15 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
           </details>
         </article>
 
-        <aside className="px-6 py-6 bg-paper-2/50 flex flex-col gap-6">
+        <aside className="px-6 py-6 bg-surface-2 flex flex-col gap-6">
           <FollowUp meetingId={meeting.id} />
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-[13px] font-semibold">Still open from earlier meetings</h2>
+              <h2 className="h-title">Still open from earlier meetings</h2>
               <span className="chip h-5 px-1.5 text-[11px] tabular-nums">{carried.length}</span>
             </div>
             <p className="text-xs text-ink-3 mb-2">What was unresolved when this meeting happened.</p>
-            <div className="card divide-y divide-line">
+            <div className="card divide-y divide-hairline">
               {carried.length ? carried.map((i) => <OpenItem key={i.id} item={i} projectId={projectId} />) : <p className="px-3 py-3 text-ink-3 text-[13px]">Nothing was carried in.</p>}
             </div>
           </div>
@@ -178,7 +178,7 @@ function H2({ icon: Icon, count, hint, children }: { icon: typeof CalendarDays; 
   return (
     <div className="flex items-center gap-2 mb-2">
       <Icon className="size-3.5 text-ink-3" />
-      <h2 className="text-[13px] font-semibold">{children}</h2>
+      <h2 className="h-title">{children}</h2>
       {count !== undefined && <span className="text-xs text-ink-3 tabular-nums">{count}</span>}
       {hint && <span className="text-xs text-ink-3">{hint}</span>}
     </div>

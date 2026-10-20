@@ -18,7 +18,7 @@ export function CopyButton({ text, label = "Copy", small = false }: { text: stri
         }
       }}
     >
-      {done ? <Check className="size-3.5 text-t-green-fg" /> : <Copy className="size-3.5" />}
+      {done ? <Check className="size-3.5 text-green" /> : <Copy className="size-3.5" />}
       {done ? "Copied" : label}
     </button>
   );

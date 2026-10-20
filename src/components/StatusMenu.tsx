@@ -1,62 +1,33 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Menu } from "@base-ui/react/menu";
 import { ChevronDown } from "lucide-react";
 import { ITEM_STATUSES, type ItemKind } from "@/lib/schema";
-import { STATUS, Status } from "./ui";
+import { Status } from "./ui";
 
-// Custom status dropdown (native selects look like the OS, not the product).
+// Status dropdown on Base UI: keyboard navigation, focus handling and dismissal come for free.
+// The popup scales out of its trigger (transform-origin from the positioner), 150ms ease-out.
 export function StatusMenu({ kind, value, onChange, pill = false }: { kind: ItemKind; value: string; onChange: (s: string) => void; pill?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLSpanElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    document.addEventListener("mousedown", close);
-    document.addEventListener("keydown", esc);
-    return () => {
-      document.removeEventListener("mousedown", close);
-      document.removeEventListener("keydown", esc);
-    };
-  }, [open]);
-
+  const options = ITEM_STATUSES[kind].filter((s) => s !== "superseded" || s === value);
   return (
-    <span ref={ref} className="relative inline-flex">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className={`inline-flex items-center gap-1 rounded-md px-1 -mx-1 hover:bg-paper-3 ${open ? "bg-paper-3" : ""}`}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
+    <Menu.Root>
+      <Menu.Trigger className="inline-flex items-center gap-1 rounded-sm px-1 -mx-1 outline-none transition-colors duration-100 hover:bg-wash data-popup-open:bg-wash focus-visible:outline-2 focus-visible:outline-primary" aria-label="Change status">
         <Status value={value} pill={pill} />
-        <ChevronDown className="size-3 text-ink-3" />
-      </button>
-      {open && (
-        <div className="menu top-full mt-1 left-0 fade-in" role="menu">
-          {ITEM_STATUSES[kind]
-            .filter((s) => s !== "superseded" || s === value)
-            .map((s) => (
-              <button
-                key={s}
-                role="menuitem"
-                className={`menu-item ${s === value ? "bg-paper-2" : ""}`}
-                onClick={() => {
-                  setOpen(false);
-                  if (s !== value) onChange(s);
-                }}
-              >
+        <ChevronDown className="size-3 text-ink-4" />
+      </Menu.Trigger>
+      <Menu.Portal>
+        <Menu.Positioner side="bottom" align="start" sideOffset={4} className="z-50 outline-none">
+          <Menu.Popup className="menu">
+            {options.map((s) => (
+              <Menu.Item key={s} className="menu-item" onClick={() => s !== value && onChange(s)}>
                 <Status value={s} />
-                {s === value && <span className="ml-auto text-ink-3 text-xs">current</span>}
-              </button>
+                {s === value && <span className="ml-auto text-ink-4 text-xs">current</span>}
+              </Menu.Item>
             ))}
-          <p className="px-2 pt-1.5 pb-1 text-[11px] text-ink-3 border-t border-line mt-1">{STATUS[value]?.label}: set by you, never by the AI.</p>
-        </div>
-      )}
-    </span>
+            <p className="px-2 pt-1.5 pb-1 text-[11px] text-ink-4 border-t border-hairline mt-1">Set by you, never by the AI.</p>
+          </Menu.Popup>
+        </Menu.Positioner>
+      </Menu.Portal>
+    </Menu.Root>
   );
 }

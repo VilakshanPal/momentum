@@ -44,10 +44,10 @@ function Origin({ item, projectId }: { item: Item; projectId: string }) {
 function OwnerInput({ value, onChange, className = "" }: { value: string | null; onChange: (v: string | null) => void; className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1.5 min-w-0 ${className}`}>
-      {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-line-2 shrink-0" />}
+      {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-hairline-2 shrink-0" />}
       <input
         list="people"
-        className={`quiet h-7 w-full text-[13px] ${value ? "" : "italic text-ink-3"}`}
+        className={`quiet h-7 w-full text-[13px] ${value ? "" : "italic text-ink-4"}`}
         placeholder="Unassigned"
         defaultValue={value ?? ""}
         onBlur={(e) => (e.target.value.trim() || null) !== value && onChange(e.target.value.trim() || null)}
@@ -76,11 +76,11 @@ export function OpenItem({ item: initial, projectId }: { item: Item; projectId: 
         </span>
       </div>
       {item.blocker && (
-        <p className="text-xs text-t-red-fg flex items-start gap-1 pl-0.5">
+        <p className="text-xs text-red flex items-start gap-1 pl-0.5">
           <OctagonAlert className="size-3 mt-0.5 shrink-0" /> {item.blocker}
         </p>
       )}
-      {err && <p className="text-xs text-t-red-fg">{err}</p>}
+      {err && <p className="text-xs text-red">{err}</p>}
     </div>
   );
 }
@@ -89,7 +89,7 @@ export function OpenItem({ item: initial, projectId }: { item: Item; projectId: 
 export function ActionRow({ item: initial, projectId }: { item: Item; projectId: string }) {
   const { item, patch, err, pending } = useItem(initial);
   return (
-    <div className={`row-hover grid ${ACTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
+    <div className={`row grid ${ACTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
       <input
         className={`quiet h-7 font-medium truncate ${item.status === "done" ? "text-ink-3 line-through" : ""}`}
         defaultValue={item.title}
@@ -100,7 +100,7 @@ export function ActionRow({ item: initial, projectId }: { item: Item; projectId:
       <OwnerInput value={item.owner} onChange={(v) => patch({ owner: v })} />
       <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} />
       <input
-        className={`quiet h-7 truncate text-[13px] ${item.blocker ? "text-t-red-fg" : "text-ink-3"}`}
+        className={`quiet h-7 truncate text-[13px] ${item.blocker ? "text-red" : "text-ink-3"}`}
         placeholder="Nothing"
         defaultValue={item.blocker ?? ""}
         onBlur={(e) => (e.target.value.trim() || null) !== item.blocker && patch({ blocker: e.target.value.trim() || null })}
@@ -109,7 +109,7 @@ export function ActionRow({ item: initial, projectId }: { item: Item; projectId:
       <span className="truncate text-right">
         <Origin item={item} projectId={projectId} />
       </span>
-      {err && <p className="col-span-full text-xs text-t-red-fg pb-1">{err}</p>}
+      {err && <p className="col-span-full text-xs text-red pb-1">{err}</p>}
     </div>
   );
 }
@@ -117,7 +117,7 @@ export function ActionRow({ item: initial, projectId }: { item: Item; projectId:
 export function QuestionRow({ item: initial, projectId }: { item: Item; projectId: string }) {
   const { item, patch, err, pending } = useItem(initial);
   return (
-    <div className={`row-hover grid ${QUESTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
+    <div className={`row grid ${QUESTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
       <input
         className={`quiet h-7 font-medium truncate ${item.status === "resolved" ? "text-ink-3" : ""}`}
         defaultValue={item.title}
@@ -129,7 +129,7 @@ export function QuestionRow({ item: initial, projectId }: { item: Item; projectI
       <span className="truncate text-right">
         <Origin item={item} projectId={projectId} />
       </span>
-      {err && <p className="col-span-full text-xs text-t-red-fg pb-1">{err}</p>}
+      {err && <p className="col-span-full text-xs text-red pb-1">{err}</p>}
     </div>
   );
 }

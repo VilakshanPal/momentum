@@ -26,21 +26,21 @@ export default async function Decisions({ params }: { params: Promise<{ id: stri
       <TopBar crumbs={[{ label: project.name, href: `/p/${id}`, icon: Briefcase }, { label: "Decisions", icon: Gavel }]} />
       <div className="px-8 py-7 max-w-[860px]">
         <div className="flex items-baseline justify-between mb-5">
-          <h1 className="text-[22px] font-semibold tracking-tight">Decision log</h1>
+          <h1 className="h-section">Decision log</h1>
           <p className="text-xs text-ink-3">Superseded decisions stay on the record. Nothing is overwritten.</p>
         </div>
 
         {groups.length ? (
-          <ol className="relative border-l border-line ml-2.5 flex flex-col gap-8">
+          <ol className="relative border-l border-hairline ml-2.5 flex flex-col gap-8">
             {groups.map((g) => (
               <li key={g.meeting_id} className="pl-6">
-                <span className="absolute -left-[5px] mt-1.5 size-[9px] rounded-full bg-paper border-2 border-ink-3" />
+                <span className="absolute -left-[5px] mt-1.5 size-[9px] rounded-full bg-surface border-2 border-ink-3" />
                 <Link href={`/p/${id}/m/${g.meeting_id}`} className="inline-flex items-center gap-2 text-[13px] text-ink-2 hover:text-ink">
                   <CalendarDays className="size-3.5 text-ink-3" />
                   <span className="font-medium text-ink">{g.title}</span>
                   <span className="tabular-nums">{fmtDate(g.held_on, { day: "numeric", month: "long", year: "numeric" })}</span>
                 </Link>
-                <div className="card mt-2 divide-y divide-line">
+                <div className="card mt-2 divide-y divide-hairline">
                   {g.items.map((d) => {
                     const newer = supersededBy.get(d.id);
                     const older = d.supersedes_id ? byId.get(d.supersedes_id) : null;
@@ -59,7 +59,7 @@ export default async function Decisions({ params }: { params: Promise<{ id: stri
                                 </span>
                               )}
                               {newer && (
-                                <span className="chip text-t-amber-fg bg-t-amber-bg">
+                                <span className="chip text-amber bg-amber/10">
                                   <ArrowUpRight className="size-3" /> Replaced by: {newer.title}
                                 </span>
                               )}

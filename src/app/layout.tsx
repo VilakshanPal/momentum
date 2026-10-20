@@ -15,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
       <body className="h-full flex overflow-hidden">
         <Sidebar />
-        <main className="flex-1 min-w-0 h-full overflow-y-auto flex flex-col">{children}</main>
+        <main className="flex-1 min-w-0 h-full overflow-y-auto flex flex-col bg-canvas">{children}</main>
       </body>
     </html>
   );
