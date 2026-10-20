@@ -171,7 +171,7 @@ export function MeetingView({ meeting, projectName, projectId, items, carried, p
               <h2 className="h-title">Still open from earlier meetings</h2>
               <span className="chip h-5 px-1.5 text-[11px] tabular-nums">{carried.length}</span>
             </div>
-            <p className="text-xs text-ink-3 mb-2">What was unresolved when this meeting happened.</p>
+            <p className="text-xs text-ink-3 mb-2">Work from earlier meetings that is still unresolved today. Live records.</p>
             <div className="card divide-y divide-hairline">
               {carried.length ? carried.map((i) => <OpenItem key={i.id} item={i} projectId={projectId} />) : <p className="px-3 py-3 text-ink-3 text-[13px]">Nothing was carried in.</p>}
             </div>
