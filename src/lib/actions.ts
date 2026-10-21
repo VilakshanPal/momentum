@@ -69,6 +69,17 @@ export async function saveMeeting(meetingId: string, meta: z.infer<typeof MetaSc
   return { ok: true, data: undefined };
 }
 
+// ---------- generation budget ----------
+
+// Shared daily cap for every model call on this link. Counts first, so a refused call is still counted.
+// ponytail: one global counter, no per-visitor limit; there is no visitor identity without sign-in.
+const DAILY_CAP = Number(process.env.DAILY_GENERATION_CAP ?? 300);
+async function takeGeneration(): Promise<string | null> {
+  const r = await one<{ n: number }>(`insert into llm_usage (day, n) values (current_date, 1) on conflict (day) do update set n = llm_usage.n + 1 returning n`);
+  if (r!.n <= DAILY_CAP) return null;
+  return `This hackathon demo has used its ${DAILY_CAP} generations for today. The budget resets at midnight UTC. Everything already published is still open to browse and edit.`;
+}
+
 // ---------- draft ----------
 
 export async function generateDraft(meetingId: string, raw_notes: string): Promise<Result<Draft>> {
@@ -82,6 +93,9 @@ export async function generateDraft(meetingId: string, raw_notes: string): Promi
 
   // Preserve the notes before anything else can fail.
   await q(`update meetings set raw_notes=$2, updated_at=now() where id=$1`, [meetingId, raw_notes]);
+
+  const capped = await takeGeneration();
+  if (capped) return { ok: false, error: capped };
 
   const carried = await carriedItems(project.id, meeting);
   try {
@@ -251,6 +265,8 @@ export async function makeFollowUp(meetingId: string): Promise<Result<string>> {
   const meeting = await getMeeting(meetingId);
   if (!meeting || meeting.status !== "published" || !meeting.mom) return { ok: false, error: "Publish the meeting first." };
   const project = (await getProject(meeting.project_id))!;
+  const capped = await takeGeneration();
+  if (capped) return { ok: false, error: capped };
   try {
     const text = await generateFollowUp({
       projectName: project.name,

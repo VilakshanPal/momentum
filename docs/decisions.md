@@ -92,3 +92,14 @@ Keyboard path from notes to draft, shown next to the notes. Nothing animates on 
 ## 2026-10-21: One click from the project page to a generated draft
 "Try it with sample notes" on the project page creates a meeting, opens the editor, types the sample notes in over about a second with a "Demo: typing sample notes" chip, then generates. "Use sample notes" inside the editor does the same typing and generation. Reduced motion skips the typing.
 Why: judges will spend about ninety seconds on the link. The old path was four decisions (New meeting, title, Use sample notes, Generate) before anything happened. The typing makes it obvious the notes are being supplied for demonstration, not pulled from somewhere. The demo flag is a query parameter the editor strips on load, so a refresh does not retype; it is ignored once the meeting has notes or a draft.
+
+## 2026-10-21: One shared daily cap on model calls
+`llm_usage` has one row per day. Every draft or follow-up generation increments it first and is refused past `DAILY_GENERATION_CAP` (default 300) with a message that names the hackathon demo and the UTC reset. Browsing, editing and publishing never touch the model, so they keep working.
+Why: the public link has no sign-in, so there is no per-person identity to rate-limit on. One global cap bounds the OpenAI bill to a few dollars a day in the worst case. Counting before calling means a refused call is still counted; simpler than a transaction and errs on the safe side.
+
+## 2026-10-21: Reset is two clicks and labelled as a demo control
+The sidebar says "Hackathon demo" and that the reset is not part of the product. The button turns into an inline confirm that says it resets the shared workspace for everyone on the link. Inline, not a browser dialog, matching the New meeting form.
+Why: one judge resetting mid-way through another judge's review was the most likely way the demo breaks for someone. Arman also wanted judges to know the reset exists only to make testing easy.
+
+## 2026-10-21: Icon and link preview are files, rendered from the app
+`src/app/icon.svg`, `apple-icon.png` and `opengraph-image.png` use the Next file conventions, so no manual head tags. `scripts/og.mjs` renders the preview card from a live screenshot of the published meeting view, so it stays true to the product when the UI changes. Metadata base is derived by Next on Vercel; `NEXT_PUBLIC_SITE_URL` covers other hosts.

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { Briefcase, CalendarDays, Gavel, ListChecks, Plus, RotateCcw } from "lucide-react";
+import { Briefcase, CalendarDays, Gavel, ListChecks, Plus } from "lucide-react";
 import { listProjects, projectStats } from "@/lib/data";
-import { resetDemo } from "@/lib/actions";
 import { NavLink } from "./NavLink";
+import { ResetDemo } from "./ResetDemo";
 
 export async function Sidebar() {
   const projects = await listProjects();
@@ -53,13 +53,12 @@ export async function Sidebar() {
       </nav>
 
       <div className="mt-auto p-3">
-        <p className="text-[12px] text-ink-4 leading-relaxed">Public demo. No sign-in. Synthetic data, shared with everyone on this link.</p>
-        <form action={resetDemo} className="mt-2">
-          <button className="btn btn-sm w-full justify-center">
-            <RotateCcw className="size-3" />
-            Reset demo data
-          </button>
-        </form>
+        <p className="text-[12px] text-ink-4 leading-relaxed">
+          Hackathon demo: no sign-in, sample data shared with everyone on this link. Try anything. The reset is a demo control, not part of the product.
+        </p>
+        <div className="mt-2">
+          <ResetDemo />
+        </div>
       </div>
     </aside>
   );

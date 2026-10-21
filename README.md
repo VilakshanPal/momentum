@@ -20,7 +20,7 @@ Copy `.env.example` to `.env`. Without `OPENAI_API_KEY`, set `LLM_MOCK=1` to exe
 
 1. Create a Supabase project. Run `db/migrations/0001_init.sql` in the SQL editor (or set `DATABASE_URL` and run `npm run db:migrate`).
 2. Seed it: `DATABASE_URL=<supabase session pooler url> npm run db:seed`.
-3. On Vercel set `DATABASE_URL`, `OPENAI_API_KEY`, and `CRON_SECRET` (any long random string). The daily cron in `vercel.json` re-seeds the demo.
+3. On Vercel set `DATABASE_URL`, `OPENAI_API_KEY`, and `CRON_SECRET` (any long random string). The daily cron in `vercel.json` re-seeds the demo. Optional: `DAILY_GENERATION_CAP` (default 300 model calls a day across the whole link).
 
 No sign-in. Everything is server actions against Postgres; no credentials reach the browser.
 
@@ -33,6 +33,7 @@ node scripts/shots.mjs .shots                       # every screen of the demo p
 node scripts/walk.mjs .shots/walk --generate        # new meeting, sample notes, generate, untick one, publish, board
 node scripts/demo-walk.mjs                          # one-click demo: Try it with sample notes, typing, generated draft
 node scripts/long-notes.mjs                         # times generation on a 19k-char transcript
+node scripts/og.mjs                                 # re-renders src/app/opengraph-image.png and apple-icon.png from the live app
 npx tsx scripts/seed-worst.ts                       # adds a worst-case project (long names, 1,200 actions, emoji, CJK)
 node scripts/shots.mjs .shots/worst --project 00000000-0000-4000-8000-000000000002 --width 1024
 npx tsx scripts/seed-worst.ts --remove
