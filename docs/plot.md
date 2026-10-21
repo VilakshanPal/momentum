@@ -27,6 +27,7 @@ Updated at the end of every work block. Read this first.
 | 18 | ClickUp one-way export | decide 27 Oct |
 | 19 | Design pass 2: break-ui worst-case seed, fixes, composition polish, animation review | done |
 | 20 | Seamless review: keep/skip checkbox per suggestion, publish count, post-publish next steps, action detail editable, Ctrl+Enter | done, walked end to end with the real model |
+| 21 | One-click demo: Try it with sample notes on the project page, typed-in notes, auto generate | done, walked with the real model (draft at 11.7s from click) |
 
 ## Spec coverage (product (1).md)
 
@@ -64,6 +65,7 @@ Updated at the end of every work block. Read this first.
 See README.md. `npm run db` → `npm run db:migrate` → `npm run db:seed` → `npm run dev`.
 
 ## Log
+- 2026-10-21 00:40: Functionality review delivered (deploy, one-click demo, generation cap, reset confirm, phone layout, link preview; skip ClickUp and Fireflies API). Arman: deploy later, build the one-click demo first. Built: Try it with sample notes button, createSampleMeeting action, typing animation in the editor, Use sample notes now types and generates. scripts/demo-walk.mjs walks it. Long-notes timing script committed (19k chars in 11.1s).
 - 2026-10-20 23:50: Design pass 2. Seamless review: every suggestion has a keep/skip checkbox, Publish shows the count, published meeting shows what went where and what to do next, action detail visible and editable, Ctrl+Enter generates. break-ui: worst-case project seeded through the DB (scripts/seed-worst.ts), eight screens reviewed at 1568 and 1024, seven breaks fixed, local Postgres re-initialised as UTF8. Full flow walked with the real model: 8 suggestions, one unticked, 7 records created, 4 carried items updated. Build, lint, tsc clean.
 - 2026-10-20 23:30: Design pass 1 on the installed skills: DESIGN.md tokens applied everywhere, motion rules from emil-design-eng, Base UI status menu, Playwright screenshot scripts. Reviewed all seven screens; fixed clipped notes pane, decision detail layout, avatar stacks. Awaiting approval before pass 2 (break-ui worst-case data, remaining composition polish).
 - 2026-10-20 04:30: Provider switched to OpenAI (user has OpenAI keys only). Real generation tested on the sample notes: accurate, evidence on every item, participants picked up, relative dates resolved correctly. First run took 47s at default reasoning; low effort brings it to under 10s. Prompt tightened: 3 to 6 discussion points, only real status changes in carried updates, never backwards. Cross-kind statuses coerced server-side.

@@ -31,6 +31,8 @@ Playwright drives the installed Chrome; nothing is downloaded.
 ```bash
 node scripts/shots.mjs .shots                       # every screen of the demo project
 node scripts/walk.mjs .shots/walk --generate        # new meeting, sample notes, generate, untick one, publish, board
+node scripts/demo-walk.mjs                          # one-click demo: Try it with sample notes, typing, generated draft
+node scripts/long-notes.mjs                         # times generation on a 19k-char transcript
 npx tsx scripts/seed-worst.ts                       # adds a worst-case project (long names, 1,200 actions, emoji, CJK)
 node scripts/shots.mjs .shots/worst --project 00000000-0000-4000-8000-000000000002 --width 1024
 npx tsx scripts/seed-worst.ts --remove

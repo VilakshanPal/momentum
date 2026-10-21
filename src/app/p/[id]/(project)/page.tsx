@@ -4,6 +4,7 @@ import { Briefcase, CalendarDays, CircleHelp, Gavel, ListChecks } from "lucide-r
 import { getProject, listMeetings, openItems, projectPeople, projectStats } from "@/lib/data";
 import { TopBar } from "@/components/TopBar";
 import { NewMeeting } from "@/components/NewMeeting";
+import { TryDemo } from "@/components/TryDemo";
 import { OpenItem, PeopleList } from "@/components/ItemRow";
 import { AvatarStack, Empty, Status, fmtDate, plural } from "@/components/ui";
 
@@ -18,6 +19,7 @@ export default async function ProjectHome({ params }: { params: Promise<{ id: st
   return (
     <>
       <TopBar crumbs={[{ label: project.name, href: `/p/${id}`, icon: Briefcase }, { label: "Meetings", icon: CalendarDays }]}>
+        <TryDemo projectId={id} />
         <NewMeeting projectId={id} />
       </TopBar>
       <PeopleList people={people} />

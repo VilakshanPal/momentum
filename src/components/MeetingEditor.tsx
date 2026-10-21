@@ -25,9 +25,10 @@ type Props = {
   supersedable: Item[];
   people: string[];
   sampleNotes: string;
+  demo?: boolean; // arrived via "Try it with sample notes": type the notes in and generate without asking
 };
 
-export function MeetingEditor({ meeting, projectName, projectId, carried, supersedable, people, sampleNotes }: Props) {
+export function MeetingEditor({ meeting, projectName, projectId, carried, supersedable, people, sampleNotes, demo = false }: Props) {
   const router = useRouter();
   const [title, setTitle] = useState(meeting.title);
   const [heldOn, setHeldOn] = useState(meeting.held_on);
@@ -39,11 +40,13 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
   const [pubErr, setPubErr] = useState<string | null>(null);
   const [generating, startGen] = useTransition();
   const [publishing, startPub] = useTransition();
+  const [typing, setTyping] = useState(false);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipNext = useRef(true);
 
   const participants = () => peopleText.split(",").map((s) => s.trim()).filter(Boolean);
-  const meta = () => ({ title: title.trim() || "Untitled meeting", held_on: heldOn, participants: participants(), raw_notes: notes });
+  const meta = (raw = notes) => ({ title: title.trim() || "Untitled meeting", held_on: heldOn, participants: participants(), raw_notes: raw });
 
   // Debounced autosave. Nothing here creates project records; that only happens on publish.
   useEffect(() => {
@@ -65,11 +68,11 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, heldOn, peopleText, notes, draft]);
 
-  const generate = () => {
+  const generate = (text = notes) => {
     setGenErr(null);
     startGen(async () => {
-      await saveMeeting(meeting.id, meta());
-      const r = await generateDraft(meeting.id, notes);
+      await saveMeeting(meeting.id, meta(text));
+      const r = await generateDraft(meeting.id, text);
       if (r.ok) {
         skipNext.current = true;
         setDraft(r.data);
@@ -81,6 +84,38 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
       } else setGenErr(r.error);
     });
   };
+
+  // Demo path: "type" the sample notes in over about a second so it is obvious they are being filled in for you, then generate.
+  const typeIn = (text: string) => {
+    if (typing || generating) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setNotes(text);
+      generate(text);
+      return;
+    }
+    setTyping(true);
+    const step = Math.ceil(text.length / 70);
+    let i = 0;
+    const id = setInterval(() => {
+      i = Math.min(text.length, i + step);
+      setNotes(text.slice(0, i));
+      const el = notesRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+      if (i >= text.length) {
+        clearInterval(id);
+        setTyping(false);
+        generate(text);
+      }
+    }, 16);
+  };
+
+  useEffect(() => {
+    if (!demo) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    const t = setTimeout(() => typeIn(sampleNotes), 300); // let the page settle first
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const publish = () => {
     if (!draft) return;
@@ -94,14 +129,14 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
 
   const over = notes.length > MAX_NOTES_CHARS;
   const tooShort = notes.trim().length < 20;
-  const canGenerate = !generating && !over && !tooShort;
+  const canGenerate = !generating && !typing && !over && !tooShort;
   const count = draft ? publishCount(draft) : null;
 
   return (
     <>
       <TopBar crumbs={[{ label: projectName, href: `/p/${projectId}`, icon: Briefcase }, { label: title || "Untitled meeting", icon: PenLine }]}>
         <span className={`text-xs mr-1 ${save === "error" ? "text-red" : "text-ink-3"}`}>{{ saved: "Saved", saving: "Saving…", dirty: "Unsaved changes", error: "Save failed" }[save]}</span>
-        <button className="btn" onClick={generate} disabled={!canGenerate} title={tooShort ? "Add some notes first" : "Ctrl+Enter in the notes"}>
+        <button className="btn" onClick={() => generate()} disabled={!canGenerate} title={tooShort ? "Add some notes first" : "Ctrl+Enter in the notes"}>
           {generating ? <Spinner /> : draft ? <RotateCw className="size-3.5" /> : <Sparkles className="size-3.5" />}
           {draft ? "Regenerate" : "Generate draft"}
         </button>
@@ -146,14 +181,22 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
               <span className={`ml-auto text-xs tabular-nums ${over ? "text-red" : "text-ink-3"}`}>
                 {notes.length.toLocaleString()} / {MAX_NOTES_CHARS.toLocaleString()}
               </span>
-              {!notes.trim() && (
-                <button className="btn btn-sm" onClick={() => setNotes(sampleNotes)}>
-                  Use sample notes
-                </button>
+              {typing ? (
+                <span className="chip text-primary enter">
+                  <span className="size-1.5 rounded-full bg-primary animate-pulse" /> Demo: typing sample notes
+                </span>
+              ) : (
+                !notes.trim() && (
+                  <button className="btn btn-sm" onClick={() => typeIn(sampleNotes)} title="Fills in notes from a sample meeting and generates the draft">
+                    <Sparkles className="size-3 text-primary" /> Use sample notes
+                  </button>
+                )
               )}
             </div>
             <textarea
+              ref={notesRef}
               value={notes}
+              readOnly={typing}
               onChange={(e) => setNotes(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && canGenerate) {
@@ -210,7 +253,7 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
           {genErr && (
             <div className="card border-red/30 bg-red/5 px-3 py-2 text-[13px] text-red flex items-center justify-between mb-3">
               <span>{genErr}</span>
-              <button className="btn btn-sm" onClick={generate}>
+              <button className="btn btn-sm" onClick={() => generate()}>
                 Retry
               </button>
             </div>

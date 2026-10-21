@@ -43,6 +43,13 @@ export async function createMeeting(projectId: string, formData: FormData) {
   redirect(`/p/${projectId}/m/${m!.id}`);
 }
 
+// Demo entry point. Creates an empty meeting and asks the editor to type the sample notes in and generate.
+export async function createSampleMeeting(projectId: string) {
+  const m = await one<{ id: string }>(`insert into meetings (project_id, title, held_on) values ($1, $2, current_date) returning id`, [projectId, "HAIRO weekly"]);
+  revalidatePath(`/p/${projectId}`);
+  redirect(`/p/${projectId}/m/${m!.id}?demo=1`);
+}
+
 const MetaSchema = z.object({
   title: z.string().min(1).max(160),
   held_on: z.string().regex(isoDate),

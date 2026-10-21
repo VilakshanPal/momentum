@@ -88,3 +88,7 @@ Windows initdb defaults to the system codepage (WIN1252), which rejects "Nguyễ
 
 ## 2026-10-20: Ctrl+Enter generates
 Keyboard path from notes to draft, shown next to the notes. Nothing animates on it (keyboard actions get no motion).
+
+## 2026-10-21: One click from the project page to a generated draft
+"Try it with sample notes" on the project page creates a meeting, opens the editor, types the sample notes in over about a second with a "Demo: typing sample notes" chip, then generates. "Use sample notes" inside the editor does the same typing and generation. Reduced motion skips the typing.
+Why: judges will spend about ninety seconds on the link. The old path was four decisions (New meeting, title, Use sample notes, Generate) before anything happened. The typing makes it obvious the notes are being supplied for demonstration, not pulled from somewhere. The demo flag is a query parameter the editor strips on load, so a refresh does not retype; it is ignored once the meeting has notes or a draft.

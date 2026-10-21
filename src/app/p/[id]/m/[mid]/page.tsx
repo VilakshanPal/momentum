@@ -8,8 +8,8 @@ import { MeetingView } from "@/components/MeetingView";
 // LLM generation can take a while on long notes; allow the server action up to 60s (Vercel Hobby ceiling).
 export const maxDuration = 60;
 
-export default async function MeetingPage({ params }: { params: Promise<{ id: string; mid: string }> }) {
-  const { id, mid } = await params;
+export default async function MeetingPage({ params, searchParams }: { params: Promise<{ id: string; mid: string }>; searchParams: Promise<{ demo?: string }> }) {
+  const [{ id, mid }, { demo }] = await Promise.all([params, searchParams]);
   const meeting = await getMeeting(mid);
   if (!meeting || meeting.project_id !== id) notFound();
   const project = (await getProject(id))!;
@@ -21,5 +21,5 @@ export default async function MeetingPage({ params }: { params: Promise<{ id: st
   }
 
   const supersedable = await supersedableDecisions(id);
-  return <MeetingEditor meeting={meeting} projectName={project.name} projectId={id} carried={carried} supersedable={supersedable} people={people} sampleNotes={SAMPLE_NOTES} />;
+  return <MeetingEditor meeting={meeting} projectName={project.name} projectId={id} carried={carried} supersedable={supersedable} people={people} sampleNotes={SAMPLE_NOTES} demo={demo === "1" && !meeting.raw_notes && !meeting.mom} />;
 }
