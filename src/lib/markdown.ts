@@ -5,7 +5,7 @@ export function momToMarkdown(meeting: Meeting, items: Item[], projectName: stri
   const mom = meeting.mom!;
   const by = (k: Item["kind"]) => items.filter((i) => i.kind === k);
   const L: string[] = [];
-  L.push(`# ${projectName} · ${meeting.title}`, `${meeting.held_on}${meeting.participants.length ? ` · ${meeting.participants.join(", ")}` : ""}`, "");
+  L.push(`# ${projectName} · ${meeting.title}`, `${meeting.held_on}${meeting.held_time ? ` ${meeting.held_time.slice(0, 5)}` : ""}${meeting.participants.length ? ` · ${meeting.participants.join(", ")}` : ""}`, "");
   L.push("## Summary", mom.summary, "");
   if (mom.discussion_points.length) L.push("## Discussion", ...mom.discussion_points.map((p) => `- ${p}`), "");
   const dec = by("decision");

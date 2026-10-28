@@ -1,4 +1,4 @@
-// Times generation on notes near the 20k cap (Vercel function timeout risk). Dev-only, uses the real model.
+// Times generation on notes near the 20k cap (Vercel function timeout risk). Dev-only. Mock model by default; --real spends OpenAI credits.
 // Usage: node scripts/long-notes.mjs
 import { chromium } from "playwright";
 
@@ -34,20 +34,21 @@ console.log("notes chars", notes.length);
 
 const b = await chromium.launch({ channel: "chrome" });
 const page = await b.newPage({ viewport: { width: 1568, height: 900 } });
+// Mock model unless --real: this script exists to time the real model, which spends credits.
+if (!process.argv.includes("--real")) await page.goto(`${base}/?dev=yes`);
 await page.goto(`${base}/p/${P}`);
 await page.getByRole("button", { name: "New meeting" }).click();
-await page.getByPlaceholder("Meeting title").fill("Long transcript test");
-await page.keyboard.press("Enter");
 await page.waitForURL(/\/m\//);
+await page.getByLabel("Meeting title").fill("Long transcript test");
 await page.locator("textarea").first().fill(notes);
 await page.waitForTimeout(1200);
 const t0 = Date.now();
 await page.locator("textarea").first().focus();
 await page.keyboard.press("Control+Enter");
 try {
-  await page.getByText("Review, edit, then publish").waitFor({ timeout: 180_000 });
+  await page.getByText("Everything ticked becomes a record").waitFor({ timeout: 180_000 });
   console.log("generated in", ((Date.now() - t0) / 1000).toFixed(1), "s");
-  const counts = await page.locator("h2:has-text('AI draft') ~ span .chip").allInnerTexts();
+  const counts = await page.locator("h2:has-text('Draft') ~ span .chip").allInnerTexts();
   console.log("counts", counts.join(" | "));
 } catch {
   console.log("FAILED after", ((Date.now() - t0) / 1000).toFixed(1), "s");

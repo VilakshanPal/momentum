@@ -8,6 +8,8 @@ export function CopyButton({ text, label = "Copy", small = false }: { text: stri
   return (
     <button
       className={`btn ${small ? "btn-sm" : ""}`}
+      aria-label={done ? "Copied" : label}
+      title={label}
       onClick={async () => {
         try {
           await navigator.clipboard.writeText(text);
@@ -19,7 +21,7 @@ export function CopyButton({ text, label = "Copy", small = false }: { text: stri
       }}
     >
       {done ? <Check className="size-3.5 text-green" /> : <Copy className="size-3.5" />}
-      {done ? "Copied" : label}
+      <span className={label.length > 6 ? "max-sm:hidden" : ""}>{done ? "Copied" : label}</span>
     </button>
   );
 }

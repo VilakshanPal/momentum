@@ -1,16 +1,20 @@
 // Drives the real review flow in the installed Chrome and saves screenshots. Dev-only.
-// Usage: node scripts/walk.mjs <outDir> [--generate]   (--generate runs generation, unticks one action, publishes)
+// Usage: node scripts/walk.mjs <outDir> [--generate] [--slow]
+//   --generate runs generation, unticks one action, publishes
+//   --slow holds the generate action for 16s so the progress state can be reviewed (the mock answers instantly otherwise)
 import { chromium } from "playwright";
 import { mkdirSync } from "node:fs";
 
 const out = process.argv[2] ?? ".shots";
 const generate = process.argv.includes("--generate");
+const slow = process.argv.includes("--slow");
 mkdirSync(out, { recursive: true });
-const base = "http://localhost:3000";
+const base = process.env.BASE ?? "http://localhost:3000";
 const P = "00000000-0000-4000-8000-000000000001";
 
 const b = await chromium.launch({ channel: "chrome" });
 const page = await b.newPage({ viewport: { width: 1568, height: 900 }, deviceScaleFactor: 1 });
+await page.goto(`${base}/?dev=yes`); // mock model: tests never spend OpenAI credits
 const shot = (name) => page.screenshot({ path: `${out}/${name}.png` });
 
 // Board: open the status menu, screenshot it open, pick a value, confirm it persisted.
@@ -26,10 +30,9 @@ await shot("board-after-change");
 // Editor: new meeting, sample notes, optionally generate.
 await page.goto(`${base}/p/${P}`);
 await page.getByRole("button", { name: "New meeting" }).click();
-await page.getByPlaceholder("Meeting title").fill("Weekly sync");
-await page.keyboard.press("Enter");
 await page.waitForURL(/\/m\//);
 await page.waitForTimeout(500);
+await page.getByLabel("Meeting title").fill("Weekly sync");
 await shot("editor-empty");
 await page.getByRole("button", { name: "Use sample notes" }).click();
 await page.waitForTimeout(400);
@@ -37,10 +40,24 @@ await shot("editor-notes");
 if (generate) {
   const t0 = Date.now();
   await page.locator("textarea").first().focus();
+  if (slow) {
+    // generateDraft posts ["<meeting id>","<notes>"]; saveMeeting and autosave post an object second, so only the generate call is held.
+    await page.route("**/*", async (route) => {
+      const r = route.request();
+      if (r.method() === "POST" && r.headers()["next-action"] && /^\["[^"]+","/.test(r.postData() ?? "")) await new Promise((res) => setTimeout(res, 16000));
+      await route.continue();
+    });
+  }
   await page.keyboard.press("Control+Enter");
   await page.waitForTimeout(800);
   await shot("editor-generating");
-  await page.getByText("Review, edit, then publish").waitFor({ timeout: 60000 });
+  if (slow) {
+    for (const at of [5, 10, 15]) {
+      await page.waitForTimeout(5000);
+      await shot(`editor-generating-${at}s`);
+    }
+  }
+  await page.getByText("Everything ticked becomes a record").waitFor({ timeout: 60000 });
   await page.waitForTimeout(600);
   console.log("generated in", ((Date.now() - t0) / 1000).toFixed(1), "s");
   await shot("editor-draft");

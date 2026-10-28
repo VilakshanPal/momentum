@@ -19,9 +19,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`}>
-      <body className="h-full flex overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 min-w-0 h-full overflow-y-auto flex flex-col bg-canvas">{children}</main>
+      <body className="h-full overflow-hidden print:h-auto print:overflow-visible">
+        {/* The flex row lives in a wrapper, not on body: portals (menus, the task drawer) append to body and must not become flex items. */}
+        <div className="h-full flex print:h-auto print:block">
+          <Sidebar />
+          <main className="flex-1 min-w-0 h-full overflow-y-auto flex flex-col bg-canvas border-l border-hairline max-[899px]:border-l-0 print:h-auto print:overflow-visible print:border-0 print:bg-white">{children}</main>
+        </div>
       </body>
     </html>
   );

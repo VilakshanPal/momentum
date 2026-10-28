@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { CalendarDays, OctagonAlert } from "lucide-react";
+import { CalendarDays, ListPlus, OctagonAlert } from "lucide-react";
 import { updateItem } from "@/lib/actions";
 import type { Item } from "@/lib/schema";
-import { ACTION_COLS, QUESTION_COLS, Avatar, Person, fmtDate } from "./ui";
+import { ACTION_COLS, QUESTION_COLS, Person, fmtDate } from "./ui";
 import { StatusMenu } from "./StatusMenu";
+import { OwnerMenu } from "./OwnerMenu";
+import { ItemModal } from "./ItemModal";
 import { DateCell } from "./DateCell";
 
 // One persistent record with optimistic inline edits. Three presentations share the hook.
@@ -33,32 +35,24 @@ function useItem(initial: Item) {
 }
 
 function Origin({ item, projectId }: { item: Item; projectId: string }) {
+  if (!item.meeting_id)
+    return (
+      <span className="flex items-center gap-1.5 max-w-full min-w-0 text-[13px] text-ink-4" title={`Added on the board, ${fmtDate(item.created_at)}`}>
+        <ListPlus className="size-3.5 shrink-0" />
+        <span className="truncate">Added on the board</span>
+      </span>
+    );
   return (
-    <Link href={`/p/${projectId}/m/${item.meeting_id}`} className="flex items-center gap-1 max-w-full min-w-0 text-xs text-ink-3 hover:text-ink" title={`From: ${item.meeting_title || "Untitled meeting"}, ${fmtDate(item.meeting_held_on)}`}>
-      <CalendarDays className="size-3 shrink-0" />
+    <Link href={`/p/${projectId}/m/${item.meeting_id}`} className="flex items-center gap-1.5 max-w-full min-w-0 text-[13px] text-ink-3 hover:text-ink" title={`From: ${item.meeting_title || "Untitled meeting"}, ${fmtDate(item.meeting_held_on)}`}>
+      <CalendarDays className="size-3.5 shrink-0" />
       <span className="truncate">
-        {item.meeting_title || "Untitled meeting"} · {fmtDate(item.meeting_held_on)}
+        {item.meeting_title || "Untitled meeting"}
+        {item.meeting_title?.includes(fmtDate(item.meeting_held_on)) ? "" : ` · ${fmtDate(item.meeting_held_on)}`}
       </span>
     </Link>
   );
 }
 
-function OwnerInput({ value, onChange, className = "" }: { value: string | null; onChange: (v: string | null) => void; className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 min-w-0 ${className}`}>
-      {value ? <Avatar name={value} size={20} /> : <span className="size-5 rounded-full border border-dashed border-hairline-2 shrink-0" />}
-      <input
-        list="people"
-        className={`quiet h-7 w-full truncate text-[13px] ${value ? "" : "italic text-ink-4"}`}
-        placeholder="Unassigned"
-        title={value ?? undefined}
-        defaultValue={value ?? ""}
-        onBlur={(e) => (e.target.value.trim() || null) !== value && onChange(e.target.value.trim() || null)}
-        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-      />
-    </span>
-  );
-}
 
 // Compact: rails and panels.
 export function OpenItem({ item: initial, projectId }: { item: Item; projectId: string }) {
@@ -91,68 +85,58 @@ export function OpenItem({ item: initial, projectId }: { item: Item; projectId: 
   );
 }
 
-// Board rows.
-export function ActionRow({ item: initial, projectId }: { item: Item; projectId: string }) {
+// Board rows, ClickUp list anatomy: status icon, name that wraps to two lines and opens the drawer, owner, date, origin.
+export function ActionRow({ item: initial, projectId, team }: { item: Item; projectId: string; team: string[] }) {
   const { item, patch, err, pending } = useItem(initial);
+  const [open, setOpen] = useState(false);
   return (
-    <div className={`row grid ${ACTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
-      <span className="flex flex-col min-w-0 py-1">
-        <input
-          className={`quiet h-7 font-medium truncate ${item.status === "done" ? "text-ink-3 line-through" : ""}`}
-          defaultValue={item.title}
-          title={item.title}
-          onBlur={(e) => e.target.value.trim() && e.target.value !== item.title && patch({ title: e.target.value.trim() })}
-          onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-        />
-        {item.detail && (
-          <input
-            className="quiet h-6 text-xs text-ink-3 truncate"
-            defaultValue={item.detail}
-            title={item.detail}
-            aria-label="Detail"
-            onBlur={(e) => (e.target.value.trim() || null) !== item.detail && patch({ detail: e.target.value.trim() || null })}
-            onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-          />
-        )}
-      </span>
-      <StatusMenu kind="action" value={item.status} onChange={(s) => patch({ status: s })} />
-      <OwnerInput value={item.owner} onChange={(v) => patch({ owner: v })} />
-      <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} />
-      <input
-        className={`quiet h-7 w-full truncate text-[13px] ${item.blocker ? "text-red" : "text-ink-3"}`}
-        placeholder="Nothing"
-        title={item.blocker ?? undefined}
-        defaultValue={item.blocker ?? ""}
-        onBlur={(e) => (e.target.value.trim() || null) !== item.blocker && patch({ blocker: e.target.value.trim() || null })}
-        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-      />
-      <span className="min-w-0 flex justify-end">
+    <div className={`row grid ${ACTION_COLS} items-center gap-3 px-3 min-h-11 text-[14px] ${pending ? "opacity-60" : ""}`}>
+      <NameCell item={item} kind="action" onStatus={(s) => patch({ status: s })} onOpen={() => setOpen(true)} />
+      <OwnerMenu value={item.owner} onChange={(v) => patch({ owner: v })} team={team} />
+      <DateCell value={item.due_on} onChange={(v) => patch({ due_on: v })} placeholder="" closed={item.status === "done"} lg />
+      <span className="min-w-0 flex justify-end max-[1200px]:hidden">
         <Origin item={item} projectId={projectId} />
       </span>
       {err && <p className="col-span-full text-xs text-red pb-1">{err}</p>}
+      <ItemModal open={open} onOpenChange={setOpen} item={item} patch={patch} projectId={projectId} team={team} />
     </div>
   );
 }
 
-export function QuestionRow({ item: initial, projectId }: { item: Item; projectId: string }) {
+export function QuestionRow({ item: initial, projectId, team }: { item: Item; projectId: string; team: string[] }) {
   const { item, patch, err, pending } = useItem(initial);
+  const [open, setOpen] = useState(false);
   return (
-    <div className={`row grid ${QUESTION_COLS} items-center gap-3 px-3 min-h-10 text-[13px] ${pending ? "opacity-60" : ""}`}>
-      <input
-        className={`quiet h-7 font-medium truncate ${item.status === "resolved" ? "text-ink-3" : ""}`}
-        defaultValue={item.title}
-        onBlur={(e) => e.target.value.trim() && e.target.value !== item.title && patch({ title: e.target.value.trim() })}
-        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-      />
-      <StatusMenu kind="question" value={item.status} onChange={(s) => patch({ status: s })} />
-      <OwnerInput value={item.owner} onChange={(v) => patch({ owner: v })} />
-      <span className="min-w-0 flex justify-end">
+    <div className={`row grid ${QUESTION_COLS} items-center gap-3 px-3 min-h-11 text-[14px] ${pending ? "opacity-60" : ""}`}>
+      <NameCell item={item} kind="question" onStatus={(s) => patch({ status: s })} onOpen={() => setOpen(true)} />
+      <OwnerMenu value={item.owner} onChange={(v) => patch({ owner: v })} team={team} />
+      <span className="min-w-0 flex justify-end max-[1200px]:hidden">
         <Origin item={item} projectId={projectId} />
       </span>
       {err && <p className="col-span-full text-xs text-red pb-1">{err}</p>}
+      <ItemModal open={open} onOpenChange={setOpen} item={item} patch={patch} projectId={projectId} team={team} />
     </div>
   );
 }
+
+// Status icon (its own menu button) beside a name button. Two separate controls: a menu trigger cannot live inside a button.
+function NameCell({ item, kind, onStatus, onOpen }: { item: Item; kind: "action" | "question"; onStatus: (s: string) => void; onOpen: () => void }) {
+  const closed = item.status === "done" || item.status === "resolved";
+  return (
+    <span className="flex items-start gap-3 min-w-0 py-2.5">
+      <span className="-mt-1 shrink-0">
+        <StatusMenu kind={kind} value={item.status} iconOnly onChange={onStatus} />
+      </span>
+      <button type="button" onClick={onOpen} className="flex-1 min-w-0 text-left cursor-pointer rounded-xs outline-none focus-visible:outline-2 focus-visible:outline-primary/40 focus-visible:outline-offset-4 group/name" title={item.title}>
+        <span className={`block text-[15px] font-medium leading-[1.4] line-clamp-2 wrap-break-word transition-colors duration-100 group-hover/name:text-primary ${closed ? "text-ink-3 line-through" : "text-ink"}`}>{item.title}</span>
+        {item.blocker && <span className="block text-[13px] text-red truncate mt-0.5">{item.blocker}</span>}
+        {item.detail && <span className="block text-[13px] text-ink-3 truncate mt-0.5">{item.detail}</span>}
+      </button>
+    </span>
+  );
+}
+
+// Side drawer with everything about one record. Edits go through the same patch as the row, so the row updates at once.
 
 // Datalist of known people, rendered once per page so owner inputs can autocomplete.
 export function PeopleList({ people }: { people: string[] }) {

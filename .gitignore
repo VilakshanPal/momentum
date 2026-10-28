@@ -44,3 +44,11 @@ next-env.d.ts
 .dev.log
 .pg.log
 .shots/
+.wal-rescue/
+.next-test/
+.next-build/
+
+# private
+/docs/
+/.test-dev.log
+/CLAUDE.md

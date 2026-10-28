@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowDownLeft, ArrowUpRight, Briefcase, CalendarDays, Gavel } from "lucide-react";
 import { getProject, listItems } from "@/lib/data";
-import { TopBar } from "@/components/TopBar";
+import { Page, TitleRow, TopBar } from "@/components/TopBar";
 import { Empty, Status, fmtDate } from "@/components/ui";
 
 export default async function Decisions({ params }: { params: Promise<{ id: string }> }) {
@@ -18,17 +18,14 @@ export default async function Decisions({ params }: { params: Promise<{ id: stri
   for (const d of decisions) {
     const g = groups.find((x) => x.meeting_id === d.meeting_id);
     if (g) g.items.push(d);
-    else groups.push({ meeting_id: d.meeting_id, title: d.meeting_title!, held_on: d.meeting_held_on!, items: [d] });
+    else groups.push({ meeting_id: d.meeting_id!, title: d.meeting_title!, held_on: d.meeting_held_on!, items: [d] }); // decisions always come from a meeting
   }
 
   return (
     <>
       <TopBar crumbs={[{ label: project.name, href: `/p/${id}`, icon: Briefcase }, { label: "Decisions", icon: Gavel }]} />
-      <div className="px-8 py-7 max-w-[860px]">
-        <div className="flex items-baseline justify-between mb-5">
-          <h1 className="h-section">Decision log</h1>
-          <p className="text-xs text-ink-3">Superseded decisions stay on the record. Nothing is overwritten.</p>
-        </div>
+      <Page>
+        <TitleRow title="Decisions" subtitle="Every decision from every published meeting. A replaced decision stays on the record, crossed out." />
 
         {groups.length ? (
           <ol className="relative border-l border-hairline ml-2.5 flex flex-col gap-8">
@@ -80,7 +77,7 @@ export default async function Decisions({ params }: { params: Promise<{ id: stri
             <Empty icon={Gavel} title="No decisions yet" hint="Confirmed and proposed decisions from published meetings appear here." />
           </div>
         )}
-      </div>
+      </Page>
     </>
   );
 }

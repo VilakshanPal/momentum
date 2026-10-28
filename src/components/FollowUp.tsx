@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Mail, RotateCw } from "lucide-react";
+import { ExternalLink, Mail, RotateCw } from "lucide-react";
 import { makeFollowUp } from "@/lib/actions";
 import { CopyButton } from "./CopyButton";
 import { Spinner } from "./ui";
 
-export function FollowUp({ meetingId }: { meetingId: string }) {
+// Step one after publishing. The button is the card's primary action; the draft replaces it in place.
+export function FollowUp({ meetingId, to, subject }: { meetingId: string; to?: string | null; subject: string }) {
   const [text, setText] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -21,27 +22,29 @@ export function FollowUp({ meetingId }: { meetingId: string }) {
   };
 
   return (
-    <div>
-      <div className="flex items-center gap-2 mb-1">
-        <Mail className="size-3.5 text-ink-3" />
-        <h2 className="h-title">Follow-up message</h2>
-      </div>
-      <p className="text-xs text-ink-3 mb-2 leading-relaxed">Drafted from the published record. Edit, then paste into email or Slack. Nothing is sent for you.</p>
+    <div className="next-follow">
       {text ? (
-        <div className="card overflow-hidden enter">
-          <textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full px-3 py-2.5 text-[13px] leading-relaxed outline-none resize-none bg-transparent" />
-          <div className="h-10 px-2 flex items-center gap-1.5 border-t border-hairline bg-surface-2">
-            <CopyButton text={text} label="Copy" small />
-            <button className="btn btn-ghost btn-sm" onClick={run} disabled={pending}>
-              {pending ? <Spinner /> : <RotateCw className="size-3" />} Redraft
-            </button>
+        <div className="enter next-follow-drafted">
+          <p className="text-[13px] text-ink-3 mb-2 leading-relaxed">Edit, then copy it or open it in your mail app{to ? ` addressed to ${to}` : ""}. Nothing is sent for you.</p>
+          <div className="rounded-md border border-hairline overflow-hidden bg-surface-2">
+            <textarea value={text} onChange={(e) => setText(e.target.value)} className="w-full px-3 py-2.5 text-[13px] leading-relaxed outline-none resize-none bg-transparent" />
+            <div className="h-10 px-2 flex items-center gap-1.5 border-t border-hairline">
+              <CopyButton text={text} label="Copy" small />
+              <a className="btn btn-ghost btn-sm" href={`mailto:${to ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`} title={to ? `Opens your mail app with a draft to ${to}` : "Opens your mail app with the draft; add the recipient there"}>
+                <ExternalLink className="size-3" /> Open in email
+              </a>
+              <button className="btn btn-ghost btn-sm" onClick={run} disabled={pending}>
+                {pending ? <Spinner /> : <RotateCw className="size-3" />} Redraft
+              </button>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="card px-3 py-5 text-center">
-          <button className="btn" onClick={run} disabled={pending}>
-            {pending ? <Spinner /> : <Mail className="size-3.5" />}
-            {pending ? "Drafting…" : "Draft follow-up"}
+        <div className="flex flex-col next-follow-empty">
+          <p className="text-[13px] text-ink-3 mb-3 leading-relaxed">Write the follow-up from what was published: decisions, who owns what, and what is still open.</p>
+          <button className="btn btn-primary btn-lg w-full justify-center" onClick={run} disabled={pending}>
+            {pending ? <Spinner /> : <Mail className="size-4" />}
+            {pending ? "Drafting" : "Draft follow-up"}
           </button>
         </div>
       )}

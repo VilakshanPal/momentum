@@ -4,8 +4,8 @@ import type { ItemStatus } from "@/lib/schema";
 // ---- status: icon + label, Linear/ClickUp style ----
 
 export const STATUS: Record<string, { label: string; Icon: LucideIcon; fg: string; bg: string }> = {
-  todo: { label: "To do", Icon: Circle, fg: "text-ink-4", bg: "bg-wash" },
-  in_progress: { label: "In progress", Icon: CircleDot, fg: "text-sky", bg: "bg-sky/15" },
+  todo: { label: "To do", Icon: Circle, fg: "text-ink-3", bg: "bg-wash" },
+  in_progress: { label: "In progress", Icon: CircleDot, fg: "text-primary", bg: "bg-primary/12" },
   done: { label: "Done", Icon: CircleCheck, fg: "text-green", bg: "bg-green/10" },
   blocked: { label: "Blocked", Icon: CircleX, fg: "text-red", bg: "bg-red/10" },
   proposed: { label: "Proposed", Icon: CircleDashed, fg: "text-amber", bg: "bg-amber/10" },
@@ -22,6 +22,19 @@ export function Status({ value, pill = false, className = "" }: { value: ItemSta
   return (
     <span className={`inline-flex items-center gap-1.5 whitespace-nowrap text-ink ${pill ? `h-6 pl-1.5 pr-2 rounded-full ${s.bg} text-xs font-medium` : "text-[13px]"} ${className}`}>
       <s.Icon className={`size-3.5 shrink-0 ${s.fg}`} strokeWidth={2.2} />
+      {s.label}
+    </span>
+  );
+}
+
+// Group header pill, ClickUp list view style: tinted background, solid text and icon, uppercase.
+// Stronger tint than the inline Status pill: white on green or orange fails contrast, so the colour goes in the fill, not the text.
+const PILL_TINT: Record<string, string> = { todo: "bg-wash-2", in_progress: "bg-primary/15", done: "bg-green/15", blocked: "bg-red/15", open: "bg-orange/15", resolved: "bg-green/15" };
+export function StatusPill({ value }: { value: string }) {
+  const s = STATUS[value] ?? STATUS.todo;
+  return (
+    <span className={`inline-flex items-center gap-1.5 h-6 px-2.5 rounded-[5px] text-[12px] font-bold uppercase tracking-[0.5px] whitespace-nowrap ${PILL_TINT[value] ?? s.bg} ${s.fg}`}>
+      <s.Icon className="size-3.5" strokeWidth={2.4} />
       {s.label}
     </span>
   );
@@ -92,8 +105,9 @@ export function AvatarStack({ names, max = 4 }: { names: string[]; max?: number 
 }
 
 // Board column templates. Kept here (no "use client") so server components get the string, not a client reference.
-export const ACTION_COLS = "grid-cols-[minmax(0,1fr)_150px_150px_120px_minmax(0,0.8fr)_180px]";
-export const QUESTION_COLS = "grid-cols-[minmax(0,1fr)_150px_150px_180px]";
+// Name takes the remaining width. The blocker lives under the name, not in a column. From meeting hides below 1200px (cells carry `max-[1200px]:hidden`).
+export const ACTION_COLS = "grid-cols-[minmax(0,1fr)_130px_110px] min-[1200px]:grid-cols-[minmax(0,1fr)_150px_120px_200px]";
+export const QUESTION_COLS = "grid-cols-[minmax(0,1fr)_130px] min-[1200px]:grid-cols-[minmax(0,1fr)_150px_200px]";
 
 // ---- misc ----
 

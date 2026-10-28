@@ -1,27 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Plus } from "lucide-react";
 import { createMeeting } from "@/lib/actions";
+import { Spinner } from "./ui";
 
-export function NewMeeting({ projectId, label = "New meeting", primary = true }: { projectId: string; label?: string; primary?: boolean }) {
-  const [open, setOpen] = useState(false);
-  const today = new Date().toLocaleDateString("en-CA");
-  if (!open)
-    return (
-      <button className={`btn ${primary ? "btn-primary" : ""}`} onClick={() => setOpen(true)}>
-        <Plus className="size-3.5" />
-        {label}
-      </button>
-    );
+// One click: the meeting is created with today's date and a default title, and the editor opens. Rename in place there.
+export function NewMeeting({ projectId, label = "New meeting", primary = false, size = "" }: { projectId: string; label?: string; primary?: boolean; size?: "" | "btn-lg" }) {
   return (
-    <form action={createMeeting.bind(null, projectId)} className="flex items-center gap-2 enter">
-      <input name="title" autoFocus required placeholder="Meeting title" className="field w-56" />
-      <input name="held_on" type="date" defaultValue={today} className="field px-2 text-ink-2" />
-      <button className="btn btn-primary">Create</button>
-      <button type="button" className="btn btn-ghost" onClick={() => setOpen(false)}>
-        Cancel
-      </button>
+    <form action={createMeeting.bind(null, projectId)}>
+      <Btn label={label} primary={primary} size={size} />
     </form>
+  );
+}
+
+function Btn({ label, primary, size }: { label: string; primary: boolean; size: string }) {
+  const { pending } = useFormStatus();
+  return (
+    <button className={`btn ${primary ? "btn-primary" : ""} ${size}`} disabled={pending}>
+      {pending ? <Spinner /> : <Plus className="size-3.5" />}
+      {label}
+    </button>
   );
 }

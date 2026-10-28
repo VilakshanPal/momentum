@@ -9,46 +9,36 @@ type Golden = Omit<Mom, "carried_updates"> & {
 
 const GOLDEN: { key: string; mom: Golden }[] = [
   {
-    key: "HAIRO weekly - 20 Oct",
+    key: "Aarohi design review - 24 Aug",
     mom: {
-      participants: ["Priya", "Meera", "Rohan", "Kavya", "Arman"],
+      participants: ["Nisha", "Tanvi", "Meera", "Rohan", "Kavya", "Arman"],
       summary:
-        "Homepage hi-fi approved with two tweaks: an orange CTA and shorter hero copy. Brand guidelines have finally arrived. The product shoot is confirmed for 28 October with photos due 3 November, so the product listing page stays blocked until then. Blog migration is scoped to the last 12 months and checkout will use Razorpay. The 29 November launch still holds if photos land on time.",
+        "Wireframes for the homepage and product page were approved with two changes: the made-in-Jaipur story moves above the bestsellers, and glaze variants become photo swatches. Vector logo files and the staging store are in. The photo shoot is on hold until Nisha clears the 45k quote with her sister, which blocks the homepage. Nisha signs off all copy and will write the first ten descriptions. Razorpay needs a business KYC. COD is parked for next week.",
       discussion_points: [
-        "Homepage hi-fi reviewed; Priya approved the direction with two changes.",
-        "Store locator raised by Priya. Feasibility depends on whether HAIRO holds the store list as data.",
-        "HubSpot contact form needs a new 'stylist or consumer' field.",
-        "29 November launch still looks achievable if photography lands by 3 November.",
+        "Nothing on the homepage works without the product photos.",
+        "About 30% of WhatsApp customers ask for COD; breakage returns on COD are the risk.",
+        "Nisha writes the first ten descriptions to set the tone; Tanvi may do the rest.",
+        "International shipping still open, Nisha leaning no for launch.",
       ],
       decisions: [
-        {
-          title: "Migrate only the last 12 months of blog posts; redirect older posts to the blog index",
-          detail: "About 40 posts move. Roughly 100 older posts get a redirect.",
-          status: "confirmed",
-          evidence: "Blog - Priya checked, migrate only the last 12 months (about 40 posts). older ones get redirected to the blog index",
-        },
-        { title: "Checkout integrates with Razorpay", detail: "Webflow has a native integration.", status: "confirmed", evidence: "Checkout is Razorpay. Rohan said fine, there's a Webflow integration" },
-        { title: "Homepage CTA becomes orange and hero copy is shortened", detail: null, status: "confirmed", evidence: "two tweaks - make the CTA orange not black, and shorten the hero copy" },
+        { title: "Story section moves above the bestsellers on the homepage", detail: null, status: "confirmed", evidence: "wants the story section (\"made in Jaipur\") higher up, above the bestsellers" },
+        { title: "Glaze variants shown as photo swatches, not a dropdown", detail: "Some custom work in Dawn.", status: "confirmed", evidence: "Nisha wants the glaze variants shown as swatches with the actual photo changing, not a dropdown. Rohan says fine in Dawn with a bit of custom work" },
       ],
       actions: [
-        { title: "Revise homepage hi-fi: orange CTA, shorter hero copy", detail: null, owner: "Meera", due_on: "2026-10-22", blocker: null, evidence: "Meera will revise by wed" },
-        { title: "Scope redirects for blog posts older than 12 months", detail: null, owner: "Rohan", due_on: null, blocker: null, evidence: "Rohan to scope the redirects" },
-        { title: "Send field spec for the 'stylist or consumer' contact form field", detail: null, owner: "Kavya", due_on: null, blocker: null, evidence: "she'll send the field spec" },
-        { title: "Ask ops whether the store list exists as data", detail: "Needed before a store locator can be scoped.", owner: "Priya", due_on: null, blocker: null, evidence: "Priya will ask ops. not committing yet" },
-        { title: "Set up a 30 minute copy review with the founder", detail: null, owner: "Priya", due_on: null, blocker: null, evidence: "she'll set up a 30 min review, date tbc" },
+        { title: "Check the 45k photo shoot quote with her sister", detail: null, owner: "Nisha", due_on: null, blocker: null, evidence: "Nisha wasn't expecting that, needs to check with her sister before booking" },
+        { title: "Write the first 10 product descriptions", detail: "Sets the tone for the rest.", owner: "Nisha", due_on: null, blocker: null, evidence: "Nisha will write the first 10 herself to set the tone, then we see" },
+        { title: "List the documents needed for the Razorpay business KYC", detail: null, owner: "Kavya", due_on: null, blocker: null, evidence: "Kavya to list what documents Nisha needs" },
+        { title: "Hi-fi homepage and product page", detail: null, owner: "Meera", due_on: "2026-08-31", blocker: null, evidence: "Meera to move to hi-fi for homepage and product page, next monday" },
       ],
-      questions: [
-        { title: "Does HAIRO have the store list as structured data?", owner: "Priya", evidence: "depends on whether they have the store list as data" },
-        { title: "When is the founder's copy review?", owner: "Priya", evidence: "date tbc" },
-      ],
+      questions: [{ title: "Do we offer COD at launch?", owner: null, evidence: "parked, decide next week" }],
+      follow_up_context: "COD decision and the shoot budget are due next Monday.",
       carried_updates_by_title: [
-        { title_includes: "brand guidelines", suggested_status: "done", evidence: "Brand guidelines FINALLY came through this morning, Meera has them" },
-        { title_includes: "Hi-fi homepage", suggested_status: "done", evidence: "Meera showed homepage hi-fi. Priya loves it" },
-        { title_includes: "Razorpay or Stripe", suggested_status: "resolved", evidence: "Checkout is Razorpay" },
-        { title_includes: "signs off on final copy", suggested_status: "resolved", evidence: "Priya says the founder does want to see final copy" },
-        { title_includes: "blog migration scope", suggested_status: "done", evidence: "migrate only the last 12 months (about 40 posts)" },
+        { title_includes: "wireframes", suggested_status: "done", evidence: "Meera walked through the homepage and product page wireframes" },
+        { title_includes: "Shopify store", suggested_status: "done", evidence: "store is set up, dev theme is on, Rohan shared the staging login with Tanvi" },
+        { title_includes: "vector logo", suggested_status: "done", evidence: "vector logo files came in friday, Meera has them" },
+        { title_includes: "photo shoot", suggested_status: "blocked", evidence: "so the shoot is on hold till that's sorted" },
+        { title_includes: "signs off", suggested_status: "resolved", evidence: "Nisha confirmed she signs off everything, her sister doesn't want to be in the loop" },
       ],
-      follow_up_context: "Next meeting: confirm the 28 October shoot happened, review the revised homepage, and lock the founder's copy review date.",
     },
   },
   {
@@ -124,7 +114,7 @@ function heuristic(notes: string, carried: Item[]): Mom {
     .map((l) => l.replace(/^\[\d\d:\d\d:\d\d\]\s*/, "").trim())
     .filter((l) => l.length > 12);
   const pick = (re: RegExp) => lines.filter((l) => re.test(l));
-  const name = (l: string) => l.match(/\b(Priya|Meera|Rohan|Arjun|Kavya|Arman)\b/)?.[1] ?? null;
+  const name = (l: string) => l.match(/\b(Nisha|Tanvi|Meera|Rohan|Arjun|Kavya|Arman)\b/)?.[1] ?? null;
   const strip = (l: string) => l.replace(/^[A-Za-z]+:\s*/, "").replace(/[.!]$/, "");
   const who = notes.match(/^(?:Participants|attendees):\s*(.+)$/im)?.[1] ?? "";
   return {

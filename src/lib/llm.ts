@@ -1,86 +1,96 @@
 import "server-only";
+import { cookies } from "next/headers";
 import OpenAI from "openai";
 import { zodTextFormat } from "openai/helpers/zod";
-import { MomSchema, type Item, type Mom } from "./schema";
+import { MomSchema, ReviewSchema, type Item, type Mom } from "./schema";
+import { FOLLOWUP_INSTRUCTIONS, MOM_INSTRUCTIONS, REVIEW_INSTRUCTIONS, applyReview, followUpInput, momInput, reviewInput, tidyMom, type MomContext } from "./prompt";
 import { mockFollowUp, mockMom } from "./mock";
 
 // Override with OPENAI_MODEL. Any model with structured outputs works.
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.5";
 const client = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-// Reasoning models: keep effort low so a draft returns in well under Vercel's 60s function limit.
-const reasoning = /^(gpt-5|o\d)/.test(MODEL) ? { effort: (process.env.OPENAI_REASONING ?? "low") as "low" | "medium" | "high" } : undefined;
+// Reasoning models: medium on the draft (the extraction is where accuracy is won), low on the review and the follow-up,
+// so the two calls together stay inside Vercel's 60s function limit. OPENAI_REASONING overrides the draft's effort.
+const isReasoning = /^(gpt-5|o\d)/.test(MODEL);
+const reasoning = isReasoning ? { effort: (process.env.OPENAI_REASONING ?? "medium") as "low" | "medium" | "high" } : undefined;
+const lowReasoning = isReasoning ? { effort: "low" as const } : undefined;
+// Second pass on every draft unless switched off (LLM_REVIEW=0): a reviewer model checks each item against the notes.
+const REVIEW = process.env.LLM_REVIEW !== "0";
 
-type Ctx = {
-  projectName: string;
-  client: string | null;
-  meetingTitle: string;
-  heldOn: string;
-  participants: string[];
-  carried: Item[];
-};
-
-const SYSTEM = `You turn rough meeting notes from an agency team into structured Minutes of Meeting.
-
-Rules you must never break:
-- Never invent a person, owner, deadline, approval, decision or commitment. If the notes do not state an owner or date, use null.
-- A decision is "confirmed" only if the notes show agreement or sign-off. Otherwise it is "proposed". Suggestions and discussion are not decisions.
-- Never mark anything complete or resolved. Status changes are made by humans after review.
-- Open questions are things nobody answered in the meeting. Keep them separate from actions.
-- For every decision, action and question, include "evidence": the shortest verbatim excerpt from the notes that justifies it, or null if none.
-- due_on must be an ISO date (YYYY-MM-DD) resolved relative to the meeting date, or null if the notes only say something vague like "soon".
-- The notes may reference work that already exists as a carried-forward item (listed in the prompt). Do not create a new action or question for it. If the notes show its status changed, add an entry to carried_updates with the item id, the new status, and the evidence. Only include entries where the status actually changes. Never move an item backwards (for example in_progress to todo, or done to anything). Suggest "done"/"resolved" only when the notes clearly say it happened.
-- participants: people the notes identify as attending, as written. Empty if the notes do not say.
-- discussion_points: three to six points covering what was talked about that is not already captured as a decision, action or question. No duplicates of the summary.
-- Write dates in prose naturally ("28 October"), ISO format only in due_on.
-- Write titles as short imperative or declarative phrases. Keep the summary to three or four sentences. follow_up_context is one or two sentences about what the next meeting needs to pick up.
-- Use only information in the notes. Do not pad with assumptions. No em dashes.`;
-
-function carriedBlock(items: Item[]) {
-  if (!items.length) return "No carried-forward items.";
-  return items
-    .map(
-      (i) =>
-        `- id=${i.id} [${i.kind}; allowed statuses: ${i.kind === "action" ? "todo, in_progress, done, blocked" : i.kind === "question" ? "open, resolved" : "proposed, confirmed"}] "${i.title}" status=${i.status}${i.owner ? ` owner=${i.owner}` : ""}${i.due_on ? ` due=${i.due_on}` : ""}${i.blocker ? ` blocker="${i.blocker}"` : ""}`,
-    )
-    .join("\n");
+// Mock instead of OpenAI: LLM_MOCK=1 locally, or a browser that opened any page with ?dev=yes (src/proxy.ts).
+export async function mocked() {
+  return (process.env.LLM_MOCK === "1" && process.env.NODE_ENV !== "production") || (await cookies()).get("dev")?.value === "1";
 }
+
+// One line per call in the server log, so Vercel's function logs show where the tokens go. Cached input is billed at a tenth.
+type Usage = { input_tokens: number; output_tokens: number; input_tokens_details?: { cached_tokens: number }; output_tokens_details?: { reasoning_tokens: number } };
+const logUsage = (what: string, u: Usage | undefined, ms: number) =>
+  u && console.log(`llm ${what}: ${(ms / 1000).toFixed(1)}s, input ${u.input_tokens} (cached ${u.input_tokens_details?.cached_tokens ?? 0}), output ${u.output_tokens} (reasoning ${u.output_tokens_details?.reasoning_tokens ?? 0})`);
+
+// Whitespace is tokens: runs of spaces and blank lines go before the notes are sent. Evidence still matches, tidyMom compares with whitespace collapsed.
+const squeeze = (s: string) => s.replace(/[ \t]+/g, " ").replace(/ ?\n ?/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
 
 function refused(res: { output: { type: string; content?: { type: string }[] }[] }) {
   return res.output.some((o) => o.type === "message" && o.content?.some((c) => c.type === "refusal"));
 }
 
-export async function generateMom(notes: string, ctx: Ctx): Promise<Mom> {
-  if (process.env.LLM_MOCK === "1" && process.env.NODE_ENV !== "production") return mockMom(notes, ctx.carried);
+export async function generateMom(notes: string, ctx: MomContext): Promise<Mom> {
+  if (await mocked()) return mockMom(notes, ctx.carried);
 
+  const text = squeeze(notes);
+  let t0 = Date.now();
   const res = await client().responses.parse({
     model: MODEL,
-    instructions: SYSTEM,
-    input: `Project: ${ctx.projectName}${ctx.client ? ` (client: ${ctx.client})` : ""}
-Meeting: ${ctx.meetingTitle} on ${ctx.heldOn}
-Participants: ${ctx.participants.join(", ") || "not listed"}
-
-Carried-forward items (already exist, do not duplicate):
-${carriedBlock(ctx.carried)}
-
-Rough notes:
-"""
-${notes}
-"""`,
+    instructions: MOM_INSTRUCTIONS,
+    input: momInput(text, ctx),
     text: { format: zodTextFormat(MomSchema, "mom") },
     reasoning,
+    max_output_tokens: 12_000, // a draft is 2 to 4k with reasoning; this only stops a runaway
+    prompt_cache_key: "mom", // same instructions every call: route to the same cache
   });
+  logUsage("mom", res.usage, Date.now() - t0);
 
-  const mom = res.output_parsed;
-  if (!mom) throw new Error(refused(res) ? "The model declined to process these notes." : "The model returned an invalid draft. Try again.");
-  // Only keep carried_updates that reference real carried items.
+  const raw = res.output_parsed;
+  if (!raw) throw new Error(refused(res) ? "The model declined to process these notes." : "The model returned an invalid draft. Try again.");
+  // Only keep carried_updates that reference real carried items, then apply the after-the-model checks (verbatim evidence, duplicates, tidy titles).
   const ids = new Set(ctx.carried.map((c) => c.id));
-  mom.carried_updates = mom.carried_updates.filter((u) => ids.has(u.item_id));
-  return mom;
+  raw.carried_updates = raw.carried_updates.filter((u) => ids.has(u.item_id));
+  const mom = tidyMom(raw, notes, ctx.carried);
+  // ponytail: the function has 120s (maxDuration on the meeting page); a draft that already took 50s skips the review rather than risk a timeout.
+  if (!REVIEW || Date.now() - t0 > 50_000) {
+    if (REVIEW) console.log("llm review: skipped, draft took too long");
+    return mom;
+  }
+
+  // Second pass. If the reviewer fails for any reason the first draft stands: a review is a bonus, never a blocker.
+  try {
+    t0 = Date.now();
+    const r = await client().responses.parse({
+      model: MODEL,
+      instructions: REVIEW_INSTRUCTIONS,
+      input: reviewInput(text, ctx, mom),
+      text: { format: zodTextFormat(ReviewSchema, "review") },
+      reasoning: lowReasoning,
+      max_output_tokens: 6_000,
+      prompt_cache_key: "review",
+    });
+    logUsage("review", r.usage, Date.now() - t0);
+    const review = r.output_parsed;
+    if (!review) return mom;
+    const changed = review.verdicts.filter((v) => v.kind !== { d: "decision", a: "action", q: "question" }[v.ref[0]] || (v.ref[0] === "d" && v.status && v.status !== mom.decisions[Number(v.ref.slice(1)) - 1]?.status));
+    console.log(`llm review: ${review.verdicts.length} verdicts, ${changed.length} changed, ${review.missed.length} missed`, changed.map((v) => `${v.ref} to ${v.kind}${v.status ? "/" + v.status : ""}: ${v.reason}`), review.missed.map((m) => `+${m.kind} "${m.title}"`));
+    return tidyMom(applyReview(mom, review, notes), notes, ctx.carried);
+  } catch (e) {
+    console.error("review failed, keeping the first draft", e);
+    return mom;
+  }
 }
 
 export async function generateFollowUp(input: {
   projectName: string;
   client: string | null;
+  clientContact?: string | null;
+  today: string;
   meetingTitle: string;
   heldOn: string;
   participants: string[];
@@ -88,26 +98,18 @@ export async function generateFollowUp(input: {
   items: Item[];
   carried: Item[];
 }): Promise<string> {
-  if (process.env.LLM_MOCK === "1" && process.env.NODE_ENV !== "production") return mockFollowUp(input);
+  if (await mocked()) return mockFollowUp(input);
 
+  const t0 = Date.now();
   const res = await client().responses.create({
     model: MODEL,
-    instructions: `You write short follow-up messages after agency client meetings. Plain text, no markdown headings, no emojis, no em dashes. Write dates like "21 October", never ISO. Friendly and direct. Only include facts given to you. If an owner or date is missing, say it is unassigned or to be confirmed rather than guessing. Structure: one-line opener, "Decisions", "Actions" (owner, due date if known), "Still open" (questions and anything needing confirmation), one-line close. Keep it under 250 words.`,
-    input: `Project: ${input.projectName}${input.client ? ` (client: ${input.client})` : ""}
-Meeting: ${input.meetingTitle} on ${input.heldOn}
-Participants: ${input.participants.join(", ")}
-
-Summary: ${input.mom.summary}
-
-Published items from this meeting:
-${input.items.map((i) => `- [${i.kind}/${i.status}] ${i.title}${i.owner ? ` · ${i.owner}` : " · unassigned"}${i.due_on ? ` · due ${i.due_on}` : ""}${i.blocker ? ` · blocked: ${i.blocker}` : ""}`).join("\n")}
-
-Still unresolved from earlier meetings:
-${carriedBlock(input.carried)}
-
-Write the follow-up message.`,
-    reasoning,
+    instructions: FOLLOWUP_INSTRUCTIONS,
+    input: followUpInput(input),
+    reasoning: lowReasoning,
+    max_output_tokens: 3_000,
+    prompt_cache_key: "followup",
   });
+  logUsage("follow-up", res.usage, Date.now() - t0);
   const text = res.output_text.trim();
   if (!text) throw new Error(refused(res) ? "The model declined to write this follow-up." : "Empty follow-up returned. Try again.");
   return text;

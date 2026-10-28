@@ -1,134 +1,101 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Briefcase, CalendarDays, CircleHelp, Gavel, ListChecks } from "lucide-react";
-import { getProject, listMeetings, openItems, projectPeople, projectStats } from "@/lib/data";
-import { TopBar } from "@/components/TopBar";
+import { ArrowRight, Briefcase, CalendarDays } from "lucide-react";
+import { getProject, listClients, listMeetings, listPeople, nextSample, openItems, projectPeople, projectStats } from "@/lib/data";
+import { Page, TitleRow, TopBar } from "@/components/TopBar";
 import { NewMeeting } from "@/components/NewMeeting";
-import { TryDemo } from "@/components/TryDemo";
-import { OpenItem, PeopleList } from "@/components/ItemRow";
-import { AvatarStack, Empty, Status, fmtDate, plural } from "@/components/ui";
+import { ProjectSettingsDialog } from "@/components/ProjectSettingsDialog";
+import { Welcome } from "@/components/TryDemo";
+import { PeopleList } from "@/components/ItemRow";
+import { Empty, STATUS, Status, fmtDate, plural } from "@/components/ui";
 
 export default async function ProjectHome({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const project = await getProject(id);
   if (!project) notFound();
-  const [meetings, open, stats, people] = await Promise.all([listMeetings(id), openItems(id), projectStats(id), projectPeople(id)]);
-  const actions = open.filter((i) => i.kind === "action");
-  const questions = open.filter((i) => i.kind === "question");
+  const [meetings, open, stats, people, sample, clients, team] = await Promise.all([listMeetings(id), openItems(id), projectStats(id), projectPeople(id), nextSample(id), listClients(), listPeople()]);
+
+  const subtitle = [plural(stats.meetings, "meeting"), plural(stats.decisions, "decision"), `${stats.open_actions} open ${stats.open_actions === 1 ? "action" : "actions"}`, `${stats.open_questions} open ${stats.open_questions === 1 ? "question" : "questions"}`].join(" · ");
 
   return (
     <>
-      <TopBar crumbs={[{ label: project.name, href: `/p/${id}`, icon: Briefcase }, { label: "Meetings", icon: CalendarDays }]}>
-        <TryDemo projectId={id} />
-        <NewMeeting projectId={id} />
-      </TopBar>
+      <TopBar crumbs={[{ label: project.name, href: `/p/${id}`, icon: Briefcase }, { label: "Meetings", icon: CalendarDays }]} />
       <PeopleList people={people} />
 
-      <div className="px-8 py-7 grid grid-cols-[minmax(0,1fr)_320px] gap-8">
-        <section className="min-w-0">
-          <div className="mb-6">
-            <h1 className="h-page wrap-break-word">{project.name}</h1>
-            {project.client && (
-              <div className="mt-2">
-                <span className="chip max-w-full">
-                  <span className="truncate">{project.client}</span>
-                </span>
-              </div>
-            )}
-            {project.description && <p className="mt-1.5 text-[13px] text-ink-2 max-w-[640px] leading-relaxed">{project.description}</p>}
-            <div className="mt-4 flex items-center gap-5 text-[13px] text-ink-2">
-              <Stat icon={CalendarDays} n={stats.meetings} label="meetings" />
-              <Stat icon={Gavel} n={stats.decisions} label="decisions" />
-              <Stat icon={ListChecks} n={stats.open_actions} label={`open of ${plural(stats.actions, "action")}`} />
-              <Stat icon={CircleHelp} n={stats.open_questions} label={`open of ${plural(stats.questions, "question")}`} />
-            </div>
-          </div>
+      <Page>
+        <Welcome projectId={id} hasSample={!!sample} />
 
-          <div className="card overflow-hidden">
-            <div className="grid grid-cols-[minmax(0,1fr)_110px_120px_150px_120px] gap-3 px-4 h-9 items-center border-b border-hairline bg-surface-2">
-              {["Meeting", "Date", "People", "Outcomes", "Status"].map((h) => (
-                <span key={h} className="eyebrow">
-                  {h}
-                </span>
-              ))}
-            </div>
+        <TitleRow title={project.name} subtitle={project.client ? `${project.client} · ${subtitle}` : subtitle} actions={<><ProjectSettingsDialog project={project} clients={clients} people={team} counts={{ meetings: stats.meetings, records: stats.decisions + stats.actions + stats.questions }} /><NewMeeting projectId={id} /></>}>
+          {project.description && <p className="mt-2 text-[14px] text-ink-2 max-w-[640px] leading-relaxed">{project.description}</p>}
+        </TitleRow>
+
+        <div className="grid gap-x-10 gap-y-10 min-[1200px]:grid-cols-[minmax(0,1fr)_320px]">
+          <section className="min-w-0">
+            <h2 className="text-[16px] font-semibold mb-2">
+              Meetings <span className="ml-1 font-normal text-ink-4 tabular-nums">{meetings.length}</span>
+            </h2>
             {meetings.length ? (
-              <ul className="divide-y divide-hairline">
-                {meetings.map((m) => (
-                  <li key={m.id}>
-                    <Link href={`/p/${id}/m/${m.id}`} className="row grid grid-cols-[minmax(0,1fr)_110px_120px_150px_120px] items-center gap-3 px-4 h-12">
-                      <span className="flex items-center gap-2.5 min-w-0">
-                        <span className="size-7 rounded-md bg-wash grid place-items-center text-ink-3 shrink-0">
-                          <CalendarDays className="size-3.5" />
-                        </span>
-                        <span className={`truncate font-medium ${m.title ? "" : "text-ink-3 italic"}`}>{m.title || "Untitled meeting"}</span>
-                      </span>
-                      <span className="text-ink-2 tabular-nums">{fmtDate(m.held_on, { day: "numeric", month: "short", year: "numeric" })}</span>
-                      <span>{m.participants.length ? <AvatarStack names={m.participants} /> : <span className="text-ink-3 text-xs">None listed</span>}</span>
-                      {m.status === "published" ? (
-                        <span className="flex items-center gap-3 text-xs text-ink-2 tabular-nums">
-                          <span className="inline-flex items-center gap-1" title="Decisions">
-                            <Gavel className="size-3 text-ink-3" /> {m.decisions}
-                          </span>
-                          <span className="inline-flex items-center gap-1" title="Actions">
-                            <ListChecks className="size-3 text-ink-3" /> {m.actions}
-                          </span>
-                          <span className="inline-flex items-center gap-1" title="Questions">
-                            <CircleHelp className="size-3 text-ink-3" /> {m.questions}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-ink-3">{m.raw_notes ? `${m.raw_notes.length.toLocaleString()} chars of notes` : "No notes yet"}</span>
-                      )}
-                      <Status value={m.status} />
-                    </Link>
-                  </li>
-                ))}
+              <ul className="flex flex-col gap-3">
+                {meetings.map((m) => {
+                  // One full-width card per meeting: date block, title and status, a two-line summary. Nothing else.
+                  const summary = m.mom?.summary || (m.raw_notes ? "Notes pasted, draft not generated yet." : "No notes yet.");
+                  return (
+                    <li key={m.id}>
+                      <Link href={`/p/${id}/m/${m.id}`} className="card flex gap-5 p-5 transition-[border-color,box-shadow] duration-150 hover:border-hairline-2 hover:shadow-[var(--shadow-soft)]">
+                        <time dateTime={m.held_on} className="shrink-0 w-16 flex flex-col tabular-nums leading-none">
+                          <span className="text-[22px] font-semibold text-ink">{fmtDate(m.held_on, { day: "numeric" })}</span>
+                          <span className="mt-1.5 text-[12px] text-ink-3">{fmtDate(m.held_on, { month: "short", year: "numeric" })}</span>
+                        </time>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-4">
+                            <h3 className={`text-[16px] font-semibold leading-snug line-clamp-2 wrap-break-word ${m.title ? "text-ink" : "text-ink-3 italic"}`}>{m.title || "Untitled meeting"}</h3>
+                            <Status value={m.status} pill className="shrink-0" />
+                          </div>
+                          <p className={`mt-1.5 max-w-[640px] text-[14px] leading-relaxed line-clamp-2 wrap-break-word ${m.mom?.summary ? "text-ink-2" : "text-ink-3"}`}>{summary}</p>
+                        </div>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
-              <Empty icon={CalendarDays} title="No meetings yet" hint="Create one and paste your rough notes. The draft comes back in seconds." />
+              <div className="card">
+                <Empty icon={CalendarDays} title="No meetings yet" hint="Start one and paste your notes. The draft comes back in seconds." action={<NewMeeting projectId={id} primary />} />
+              </div>
             )}
-          </div>
-        </section>
+          </section>
 
-        <aside className="min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h2 className="h-title">Open work</h2>
-            <span className="chip h-5 px-1.5 text-[11px] tabular-nums">{open.length}</span>
-          </div>
-          <p className="text-xs text-ink-3 mb-3 leading-relaxed">Unresolved across every meeting. These carry into the next one automatically.</p>
-
-          <Group icon={ListChecks} title="Actions" n={actions.length}>
-            {actions.length ? actions.map((i) => <OpenItem key={i.id} item={i} projectId={id} />) : <p className="px-3 py-3 text-xs text-ink-3">Nothing open.</p>}
-          </Group>
-          <Group icon={CircleHelp} title="Questions" n={questions.length}>
-            {questions.length ? questions.map((i) => <OpenItem key={i.id} item={i} projectId={id} />) : <p className="px-3 py-3 text-xs text-ink-3">Nothing open.</p>}
-          </Group>
-        </aside>
-      </div>
+          <aside className="min-w-0">
+            <div className="flex items-baseline justify-between gap-3 mb-1">
+              <h2 className="text-[16px] font-semibold">
+                Open tasks <span className="ml-1 font-normal text-ink-4 tabular-nums">{open.length}</span>
+              </h2>
+            </div>
+            <p className="text-[13px] text-ink-3 mb-3 leading-relaxed">Still unresolved. They carry into the next meeting on their own.</p>
+            {open.length ? (
+              <ul className="flex flex-col">
+                {open.slice(0, 6).map((i) => {
+                  const s = STATUS[i.status];
+                  return (
+                    <li key={i.id} className="flex items-start gap-2.5 py-2 border-b border-hairline last:border-b-0 min-w-0">
+                      <s.Icon className={`size-3.5 mt-[3px] shrink-0 ${s.fg}`} strokeWidth={2.2} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[13.5px] leading-snug text-ink break-words">{i.title}</span>
+                        <span className="block text-xs text-ink-3 mt-0.5 truncate">{i.owner ?? "Unassigned"}{i.due_on ? ` · ${fmtDate(i.due_on)}` : ""}</span>
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-[13px] text-ink-3 py-2">Nothing open.</p>
+            )}
+            <Link href={`/p/${id}/board`} className="mt-3 inline-flex items-center gap-1 text-[13px] font-medium text-primary hover:underline">
+              See all on the board <ArrowRight className="size-3.5" />
+            </Link>
+          </aside>
+        </div>
+      </Page>
     </>
-  );
-}
-
-function Stat({ icon: Icon, n, label }: { icon: typeof CalendarDays; n: number; label: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <Icon className="size-3.5 text-ink-3" />
-      <span className="font-semibold text-ink tabular-nums">{n.toLocaleString("en-GB")}</span>
-      <span>{label}</span>
-    </span>
-  );
-}
-
-function Group({ icon: Icon, title, n, children }: { icon: typeof CalendarDays; title: string; n: number; children: React.ReactNode }) {
-  return (
-    <div className="card mb-3 overflow-hidden">
-      <div className="h-8 px-3 flex items-center gap-1.5 border-b border-hairline bg-surface-2 text-xs font-medium text-ink-2">
-        <Icon className="size-3.5 text-ink-3" />
-        {title}
-        <span className="text-ink-3 tabular-nums">{n}</span>
-      </div>
-      <div className="divide-y divide-hairline">{children}</div>
-    </div>
   );
 }
