@@ -11,7 +11,8 @@ export const DEMO_PROJECT = {
   description: "Handmade tableware studio in Jaipur moving from Instagram DM and WhatsApp orders to a Shopify store. Agency team: design, dev, CRM, media.",
 };
 
-export type Sample = { n: number; title: string; held_on: string; notes: string };
+// n is the call number in the demo story; null for the generic sample every other project gets.
+export type Sample = { n: number | null; title: string; held_on: string; notes: string };
 
 export const SAMPLES: Sample[] = [
   {
@@ -220,3 +221,45 @@ Nisha thanked the team. project closed`,
 ];
 
 export const sampleByNo = (n: number | null | undefined) => SAMPLES.find((s) => s.n === n) ?? null;
+
+// Every project other than the demo gets this one sample: a website-changes call that fits any brand. The brand is the
+// project's client (or the project name), the people are the client contact, the project team and anyone already seen
+// in its meetings, so the draft lands with the right names and the participants picker fills itself. Roles stand in
+// when a new project has nobody yet.
+export function genericSample(project: { name: string; client: string | null; client_contact: string | null; team: string[] }, people: string[], today: string): Sample {
+  const brand = project.client || project.name;
+  const seen = new Set<string>();
+  const pool: string[] = [];
+  for (const raw of [project.client_contact ?? "", ...project.team, ...people]) {
+    const name = raw.replace(/\s*\(.*?\)\s*/g, "").trim();
+    const key = name.split(/\s+/)[0].toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    pool.push(name);
+  }
+  // Roles stand in for missing people in the prose only; the attendees line lists real names, so the picker never fills with "dev".
+  const speakers = pool.map((n) => n.split(/\s+/)[0]);
+  for (const role of ["the client", "design", "dev", "accounts"]) if (speakers.length < 4) speakers.push(role);
+  const [client, a, b, c] = speakers;
+  const Client = client[0].toUpperCase() + client.slice(1);
+  const attendees = pool.length ? `attendees: ${pool.slice(0, 6).join(", ")}
+
+` : "";
+  const day = new Date(`${today}T00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return {
+    n: null,
+    title: "Website changes",
+    held_on: today,
+    notes: `${brand} website changes - ${day}
+${attendees}${Client}: the homepage hero still shows last season's campaign, wants the new one up before the weekend. ${a} to swap it
+navigation - too many items on mobile, ${a} proposed collapsing services under one menu. agreed
+contact form - ${client} says half the enquiries come in with no phone number. agreed - phone becomes required, ${b} to change the form
+page speed - ${a} ran a check, the homepage takes over 4 seconds on mobile because of the hero video. agreed - still image instead of the video for now, ${b} to do it this week
+analytics - ${client} can't see which pages lead to enquiries. ${c} to set up goal tracking and send a short report at the start of each month
+about page - ${client} wants the team photos updated, will send new ones by friday
+blog - ${client} asked whether the blog is worth keeping, nobody has posted since march. left open, ${client} to decide
+footer still links to the old privacy policy. ${b} to fix
+${client} asked about a live chat widget. ${a} says someone has to answer it, ${client} not sure who. parked
+next call in two weeks`,
+  };
+}

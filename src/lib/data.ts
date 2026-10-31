@@ -1,6 +1,6 @@
 import { q, one } from "./db";
 import type { Client, Item, Meeting, Person, Project } from "./schema";
-import { SAMPLES, type Sample } from "./samples";
+import { DEMO_PROJECT_ID, SAMPLES, genericSample, type Sample } from "./samples";
 
 const PROJECT_SELECT = `select p.*, c.brand as client, c.email as client_email, c.name as client_contact from projects p left join clients c on c.id = p.client_id`;
 export const listProjects = () => q<Project>(`${PROJECT_SELECT} order by p.created_at`);
@@ -152,8 +152,19 @@ export const projectPeople = async (projectId: string) => {
   return [...byFirst.values()].sort();
 };
 
-// The next call of the sample story for this project: the one after the highest published sample. Null once all ten are in.
+// Today on the server's clock, not UTC, so a late-evening click does not date the sample yesterday.
+const localToday = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+
+// The next call of the sample story for the demo project: the one after the highest published sample, null once all ten are in.
+// Any other project gets the generic sample, built from its own brand and people.
 export const nextSample = async (projectId: string): Promise<Sample | null> => {
+  if (projectId !== DEMO_PROJECT_ID) {
+    const [project, people] = await Promise.all([getProject(projectId), projectPeople(projectId)]);
+    return project ? genericSample(project, people, localToday()) : null;
+  }
   const r = await one<{ n: number }>(`select coalesce(max(sample_no), 0)::int as n from meetings where project_id = $1 and status = 'published'`, [projectId]);
   return SAMPLES[r!.n] ?? null;
 };

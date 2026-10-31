@@ -43,6 +43,7 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
   const [draft, setDraft] = useState<Draft | null>(meeting.mom);
   const [save, setSave] = useState<"saved" | "saving" | "dirty" | "error">("saved");
   const [genErr, setGenErr] = useState<string | null>(null);
+  const [nudge, setNudge] = useState(false); // Generate pressed with no notes: say so next to the button until they type
   const [pubErr, setPubErr] = useState<string | null>(null);
   const [generating, startGen] = useTransition();
   const [publishing, startPub] = useTransition();
@@ -151,6 +152,12 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
   const over = notes.length > MAX_NOTES_CHARS;
   const tooShort = notes.trim().length < 20;
   const canGenerate = !generating && !typing && !over && !tooShort;
+  const tryGenerate = () => {
+    if (tooShort) {
+      setNudge(true);
+      notesRef.current?.focus();
+    } else generate();
+  };
   const count = draft ? publishCount(draft) : null;
 
   // Below 1200px the columns stack; once a draft exists the notes fold into a strip so the draft is the first thing on screen.
@@ -247,11 +254,14 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
                   ref={notesRef}
                   value={notes}
                   readOnly={typing}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onChange={(e) => {
+                    setNotes(e.target.value);
+                    if (nudge && e.target.value.trim().length >= 20) setNudge(false);
+                  }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && canGenerate) {
+                    if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !generating && !typing && !over) {
                       e.preventDefault();
-                      generate();
+                      tryGenerate();
                     }
                   }}
                   placeholder="Type, paste a transcript, or hold the Wispr Flow key and talk. Rough is fine."
@@ -262,14 +272,20 @@ export function MeetingEditor({ meeting, projectName, projectId, carried, supers
 
               {!draft && (
                 <div className="flex flex-wrap items-center gap-3 -mt-1">
-                  <button className="btn btn-primary btn-lg max-sm:w-full justify-center" onClick={() => (tooShort ? notesRef.current?.focus() : generate())} disabled={generating || typing || over} title={tooShort ? "Add some notes first" : undefined}>
+                  <button className="btn btn-primary btn-lg max-sm:w-full justify-center" onClick={tryGenerate} disabled={generating || typing || over} title={tooShort ? "Add some notes first" : undefined}>
                     {generating ? <Spinner /> : <Sparkles className="size-4" />}
                     {generating ? "Generating" : "Generate draft"}
                   </button>
-                  <span className="text-xs text-ink-3 inline-flex items-center gap-1">
-                    <Kbd>Ctrl</Kbd>
-                    <Kbd>Enter</Kbd>
-                  </span>
+                  {nudge && tooShort ? (
+                    <span className="text-[13px] text-red" role="alert">
+                      {notes.trim() ? "A few more lines first." : "Notes are empty. Type, paste or dictate first."}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-ink-3 inline-flex items-center gap-1">
+                      <Kbd>Ctrl</Kbd>
+                      <Kbd>Enter</Kbd>
+                    </span>
+                  )}
                   <span className="text-xs text-ink-3 inline-flex items-center gap-1.5 basis-full sm:basis-auto sm:ml-auto">
                     <Mic className="size-3 shrink-0" /> Nothing leaves this page until you publish.
                   </span>

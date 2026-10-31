@@ -10,7 +10,7 @@ import { mockFollowUp, mockMom } from "./mock";
 const MODEL = process.env.OPENAI_MODEL ?? "gpt-5.5";
 const client = () => new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 // Reasoning models: medium on the draft (the extraction is where accuracy is won), low on the review and the follow-up,
-// so the two calls together stay inside Vercel's 60s function limit. OPENAI_REASONING overrides the draft's effort.
+// so the two calls together stay inside the meeting page's 120s maxDuration. OPENAI_REASONING overrides the draft's effort.
 const isReasoning = /^(gpt-5|o\d)/.test(MODEL);
 const reasoning = isReasoning ? { effort: (process.env.OPENAI_REASONING ?? "medium") as "low" | "medium" | "high" } : undefined;
 const lowReasoning = isReasoning ? { effort: "low" as const } : undefined;
@@ -56,8 +56,8 @@ export async function generateMom(notes: string, ctx: MomContext): Promise<Mom> 
   const ids = new Set(ctx.carried.map((c) => c.id));
   raw.carried_updates = raw.carried_updates.filter((u) => ids.has(u.item_id));
   const mom = tidyMom(raw, notes, ctx.carried);
-  // ponytail: the function has 120s (maxDuration on the meeting page); a draft that already took 50s skips the review rather than risk a timeout.
-  if (!REVIEW || Date.now() - t0 > 50_000) {
+  // ponytail: the function has 120s (maxDuration on the meeting page) and the review takes 4 to 15s; a draft that already took 90s skips it rather than risk a timeout.
+  if (!REVIEW || Date.now() - t0 > 90_000) {
     if (REVIEW) console.log("llm review: skipped, draft took too long");
     return mom;
   }
